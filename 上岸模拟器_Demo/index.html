@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>上岸模拟器 · v0.4</title>
+<link rel="stylesheet" href="style.css?v=0.4.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- 开始 -->
+  <section id="screen-start" class="screen active">
+    <div class="container">
+      <div class="logo">
+        <div class="logo-sub">2026 考公模拟</div>
+        <h1 class="logo-main">上岸模拟器</h1>
+        <div class="logo-tag">v0.4 · 24h时间制 · 起床/赖床/熬夜系统</div>
+      </div>
+
+      <div class="stats-preview">
+        <div class="stat-item">📚 复习</div>
+        <div class="stat-item">❤️ 心态</div>
+        <div class="stat-item">💰 钱包</div>
+        <div class="stat-item">🤝 关系</div>
+        <div class="stat-item">🧠 精神</div>
+      </div>
+
+      <div class="intro-text">
+        <p>你是一个考公人。</p>
+        <p>每天 <b>24 小时</b>，每个行动会消耗具体时间。</p>
+        <p>每天 <b>3-5 个⚡体力点</b> + <b>选择起床时间</b>。</p>
+        <p>连续早起会变强、连续赖床会昏睡到 11:00。</p>
+        <p class="hint">睡眠不足 6h 精神会扣分。<br>聚餐 3-5h、出去玩 6-10h——别浪费一天。</p>
+      </div>
+
+      <button class="btn-main" onclick="Game.showIdentity()">开始备考</button>
+      <button class="btn-secondary" onclick="Settings.open()">⚙️ 接入 AI 生成事件（可选）</button>
+      <div class="footer-text">v0.4 · 时间系统 · 13个人生标签 · 16种行动</div>
+    </div>
+  </section>
+
+  <!-- AI 设置 -->
+  <div id="settingsPanel" class="settings-panel">
+    <div class="settings-box">
+      <h3 class="settings-title">🤖 AI 即兴事件设置</h3>
+      <p class="settings-desc">输入腾讯混元 API Key（保存在你的浏览器，不上传）</p>
+      <input type="password" id="apiKeyInput" placeholder="sk-xxxxxxxx" class="settings-input">
+      <div class="settings-buttons">
+        <button class="btn-main" onclick="Settings.save()">保存</button>
+        <button class="btn-secondary" onclick="Settings.close()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 身份选择 -->
+  <section id="screen-identity" class="screen">
+    <div class="container">
+      <h2 class="screen-title">选择你的身份</h2>
+      <p class="screen-sub">不同身份决定初始数值和每日体力上限</p>
+      <div class="choice-grid" id="identityGrid"></div>
+    </div>
+  </section>
+
+  <!-- 人生标签（新） -->
+  <section id="screen-lifetags" class="screen">
+    <div class="container">
+      <h2 class="screen-title">为自己贴标签</h2>
+      <p class="screen-sub">网络流行标签 · <b>最多选 4 个</b> · 影响初始数值和事件偏好</p>
+      <div class="lifetags-grid" id="lifeTagsGrid"></div>
+      <div class="lifetag-footer">
+        <span id="lifeTagsCount">已选 0 / 4</span>
+        <button class="btn-main btn-tag-confirm" onclick="Game.confirmLifeTags()">确认 →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 月份选择 -->
+  <section id="screen-month" class="screen">
+    <div class="container">
+      <h2 class="screen-title">几月开始备考？</h2>
+      <p class="screen-sub">决定你的"卷度起点"</p>
+      <div class="choice-grid month-grid" id="monthGrid"></div>
+    </div>
+  </section>
+
+  <!-- 游戏主界面 -->
+  <section id="screen-game" class="screen">
+    <div class="container game-container">
+      <div class="status-bar">
+        <div class="status-top-v3">
+          <div class="date-box" id="dateBox"></div>
+          <div class="ap-box" id="apBox"></div>
+        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="path-partner-bar" id="pathPartnerBar"></div>
+      </div>
+
+      <!-- 起床/睡眠对话 -->
+      <div id="wakeBox" class="wake-box" style="display:none;"></div>
+
+      <!-- 行动网格 -->
+      <div id="actionsSection">
+        <div class="section-title">⚡ 现在做点什么？</div>
+        <div class="actions-grid" id="actionsGrid"></div>
+        <button id="endDayBtn" class="btn-end-day" onclick="Game.endDay()">🌙 结束今日</button>
+      </div>
+
+      <!-- 事件 -->
+      <div id="eventBox" class="event-box" style="display:none;">
+        <div class="event-title" id="eventTitle"></div>
+        <div class="event-desc" id="eventDesc"></div>
+        <div class="event-choices" id="eventChoices"></div>
+      </div>
+
+      <div class="log-box" id="logBox"></div>
+    </div>
+  </section>
+
+  <!-- 结局 -->
+  <section id="screen-ending" class="screen">
+    <div class="container ending-container">
+      <div class="ending-emoji" id="endingEmoji"></div>
+      <h1 class="ending-title" id="endingTitle"></h1>
+      <div class="ending-sub" id="endingSub"></div>
+      <div class="ending-narrative" id="endingNarrative"></div>
+      <div class="ending-stats" id="endingStats"></div>
+      <div class="ending-achievements">
+        <div class="achievements-title">🏅 解锁成就</div>
+        <div class="achievements-list" id="achievementsList"></div>
+      </div>
+      <div class="ending-buttons">
+        <button class="btn-main" onclick="Game.reset()">再来一局</button>
+        <button class="btn-secondary" onclick="Share.screenshot()">截图分享</button>
+      </div>
+      <div class="footer-text">《上岸模拟器》v0.4</div>
+    </div>
+  </section>
+
+  <div id="toast"></div>
+  <div id="fanjin-overlay" class="fanjin-overlay">
+    <div class="fanjin-text" id="fanjinText"></div>
+  </div>
+
+</div>
+
+<script src="data.js?v=0.4.0"></script>
+<script src="game.js?v=0.4.0"></script>
+
+</body>
+</html>
