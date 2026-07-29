@@ -748,6 +748,20 @@ body::before {
   box-shadow: 3px 5px 0 var(--accent);
   border-color: var(--ink);
 }
+/* 按压态 P0新增 — 瞬时缩小反馈 */
+.action-card:active {
+  transform: scale(0.95);
+  transition: transform 0.05s;
+}
+/* 执行脉冲 P0新增 — 刚执行完的视觉锚点 */
+.action-card.just-executed {
+  animation: actionPulse 0.7s ease-out;
+}
+@keyframes actionPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(185,28,28,0.5); }
+  70%  { box-shadow: 0 0 0 14px rgba(185,28,28,0); }
+  100% { box-shadow: 0 0 0 0 rgba(185,28,28,0); }
+}
 .action-card:hover .action-desc,
 .action-card:hover .action-fx,
 .action-card:hover .action-time { color: rgba(255,255,255,0.75); }
@@ -1010,6 +1024,29 @@ body::before {
   color: #7a5f00;
   font-weight: bold;
   font-family: "STKaiti", "KaiTi", serif;
+}
+
+/* ============================================ */
+/* 模态遮罩系统 P0 */
+/* ============================================ */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 800;
+  align-items: center; justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.active {
+  display: flex;
+  animation: fadeIn 0.25s;
+}
+.modal-overlay .wake-box,
+.modal-overlay .event-box {
+  margin: 0;
+  max-width: 440px; width: 100%;
+  max-height: 85vh; overflow-y: auto;
+  background: #fdf8ee;
 }
 
 /* 起床/睡眠 对话框（重做） */
