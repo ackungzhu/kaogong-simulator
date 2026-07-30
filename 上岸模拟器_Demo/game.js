@@ -1,5 +1,6 @@
 /**
- * 《上岸模拟器》 v0.6 · 核心逻辑
+ * 《上岸模拟器》 v0.7 · 核心逻辑
+ * v0.7: 身份专属事件引擎 + 7身份29事件 + 58新成就 + 摸鱼越界惩罚系统
  * v0.6: 续读功能 + 事件频率+权重修复 + 模态关闭手势 + 成就bug修复
  * v0.5: 存档系统 + 模态遮罩 + 执行脉冲 + UI局部更新 + 事件稀有度引擎
  */
@@ -267,6 +268,14 @@ const Game = {
     Player.nightAlarm = p.nightAlarm;
     Player._examScore = p._examScore || null;
     Player._eventTriggeredToday = p._eventTriggeredToday || false;
+    // v0.7: 恢复身份事件引擎状态
+    Player.moyuCount = p.moyuCount || 0;
+    Player.moyuWarned = p.moyuWarned || false;
+    Player.moyuPunished = p.moyuPunished || false;
+    Player.studyMonthlyPenalty = p.studyMonthlyPenalty || 0;
+    Player.moneyMonthlyPenalty = p.moneyMonthlyPenalty || 0;
+    Player.moneyPenaltyMonths = p.moneyPenaltyMonths || 0;
+    Player.lastIdentityEventDay = p.lastIdentityEventDay || 0;
 
     toast(`📂 已续读 · ${Player.month}月${Player.day}日 第${Player.daysPlayed + 1}天`, "achievement", 2000);
     showScreen("screen-game");
@@ -315,9 +324,18 @@ const Game = {
     const ident = IDENTITIES.find(i => i.id === id);
     Player.identity = id;
     Object.assign(Player.stats, ident.init);
-    if (id === "985") Player.apMax = 5;
-    else if (id === "sanben") Player.apMax = 4;
-    else if (id === "35plus") Player.apMax = 3;
+    // 每日体力上限：身份决定你的"行动力"
+    if (ident.apMax != null) {
+      Player.apMax = ident.apMax;
+    } else if (id === "985" || id === "xuandiao") {
+      Player.apMax = 5;
+    } else if (id === "sanben" || id === "haigui") {
+      Player.apMax = 4;
+    } else if (id === "35plus" || id === "bianzhi") {
+      Player.apMax = 3;
+    } else {
+      Player.apMax = 2; // 宝妈
+    }
     Player.ap = Player.apMax;
     this._selectedIdentity = null;
     showScreen("screen-lifetags");
@@ -684,7 +702,42 @@ const Game = {
       `;
     }).join("");
 
+    // v0.7: 摸鱼指示器 + debuff徽章（在 statsGrid 之后渲染）
+    this.renderStatusExtras();
+
     this.renderPathPartners();
+  },
+
+  // v0.7: 状态栏扩展（摸鱼指示器 + debuff 徽章）
+  renderStatusExtras() {
+    const statsGrid = $("statsGrid");
+    if (!statsGrid) return;
+    // 移除旧的扩展区
+    const old = $("statusExtras");
+    if (old) old.remove();
+    const extras = document.createElement("div");
+    extras.id = "statusExtras";
+    let html = "";
+    // 摸鱼指示器（仅在职编外）
+    if (Player.identity === "bianzhi") {
+      const cnt = Player.moyuCount || 0;
+      const warnClass = cnt >= 3 ? "danger" : (cnt >= 2 ? "warn" : "");
+      const warnText = cnt >= 3 ? `🐟 摸鱼 ${cnt}/3 · ⚠️ 已被约谈！`
+                     : cnt >= 2 ? `🐟 摸鱼 ${cnt}/3 · 危险边缘`
+                     : `🐟 摸鱼 ${cnt}/3`;
+      html += `<div class="moyu-indicator ${warnClass}">${warnText}</div>`;
+    }
+    // debuff 徽章
+    if (Player.moneyPenaltyMonths > 0) {
+      html += `<div class="debuff-badges"><span class="badge-debuff">⚠️ 降薪中 · 剩 ${Player.moneyPenaltyMonths} 月</span></div>`;
+    }
+    if (Player.studyMonthlyPenalty > 0) {
+      html += `<div class="debuff-badges"><span class="badge-debuff">📮 调岗中 · 复习效率 -${Player.studyMonthlyPenalty}/月</span></div>`;
+    }
+    if (html) {
+      extras.innerHTML = html;
+      statsGrid.parentNode.insertBefore(extras, statsGrid.nextSibling);
+    }
   },
 
   renderPathPartners() {
@@ -791,6 +844,9 @@ const Game = {
     this.renderPathPartners();
     this.renderActions();
 
+    // v0.7: 身份事件引擎（优先级最高：强制触发的警告/处罚会立即打断）
+    if (this.triggerIdentityEvent()) return;
+
     // P0 修复: 每日1次强触发 + 行动间20%小概率额外事件
     if (!Player._eventTriggeredToday && Player.actionLog.length >= 2) {
       Player._eventTriggeredToday = true;
@@ -891,6 +947,16 @@ const Game = {
       Player.month++;
       if (Player.month > 12) Player.month = 1;
       this.monthlyUpkeep();
+      // v0.7: 降薪debuff按月扣钱
+      if (Player.moneyPenaltyMonths > 0) {
+        this.applyEffects({ money: -Player.moneyMonthlyPenalty });
+        this.addLog(`💸 <b>降薪扣款</b>：绩效 -${Player.moneyMonthlyPenalty}（还剩 ${Player.moneyPenaltyMonths - 1} 个月）`);
+        Player.moneyPenaltyMonths--;
+        if (Player.moneyPenaltyMonths === 0) {
+          Player.moneyMonthlyPenalty = 0;
+          toast("💼 降薪处罚到期", "achievement", 2000);
+        }
+      }
     }
 
     const mile = MILESTONES.find(m => m.month === Player.month && m.day === Player.day);
@@ -931,6 +997,10 @@ const Game = {
         delta[k] = (delta[k] || 0) + v;
       });
     });
+    // v0.7: 调岗debuff（在职编外被调至收发室，永久月复习效率-2）
+    if (Player.studyMonthlyPenalty > 0) {
+      delta.study = (delta.study || 0) - Player.studyMonthlyPenalty;
+    }
     this.applyEffects(delta);
     this.addLog(`📅 <b>${Player.month}月总结</b> · 房租水电 + 路线/搭子加成`);
   },
@@ -1056,8 +1126,44 @@ const Game = {
 
   showEvent(event) {
     $("actionsSection").style.display = "none";
-    $("eventBox").style.display = "block";
+    const eventBox = $("eventBox");
+    eventBox.style.display = "block";
     $("wakeBox").style.display = "none";
+
+    // v0.7: 身份事件视觉标识
+    eventBox.className = "event-box";
+    const isIdentityEvent = event.id && (event.id.startsWith("bianzhi_") || event.id.startsWith("985_") ||
+      event.id.startsWith("xuandiao_") || event.id.startsWith("sanben_") ||
+      event.id.startsWith("haigui_") || event.id.startsWith("35plus_") ||
+      event.id.startsWith("baoma_"));
+    const isCritical = event.id === "bianzhi_warning" || event.id === "bianzhi_punishment";
+    if (isCritical) {
+      eventBox.classList.add("critical-event");
+    } else if (isIdentityEvent) {
+      eventBox.classList.add("identity-event");
+    }
+    // 设置身份标签
+    const identityTags = {
+      "bianzhi_": "🏛️ 在职编外",
+      "985_": "🎓 985 应届",
+      "xuandiao_": "🎯 选调生",
+      "sanben_": "📚 三本二战",
+      "haigui_": "🌏 海归硕士",
+      "35plus_": "💼 35+ 被裁",
+      "baoma_": "👶 全职宝妈",
+    };
+    let identityTag = "";
+    if (isIdentityEvent) {
+      for (const prefix in identityTags) {
+        if (event.id.startsWith(prefix)) {
+          identityTag = `${identityTags[prefix]} · 专属`;
+          break;
+        }
+      }
+      eventBox.setAttribute("data-identity-tag", identityTag);
+    } else {
+      eventBox.removeAttribute("data-identity-tag");
+    }
 
     const rarityLabel = event.rarity === "legendary" ? "🟡传说" :
                         event.rarity === "epic" ? "🟣史诗" :
@@ -1067,8 +1173,13 @@ const Game = {
     $("eventDesc").innerHTML = event.desc;
     $("eventChoices").innerHTML = event.choices.map((ch, i) => {
       const label = ch.label || String.fromCharCode(65 + i);
+      // v0.7: 风险标识
+      const tagStr = Array.isArray(ch.tag) ? ch.tag.join(",") : (ch.tag || "");
+      let riskClass = "";
+      if (tagStr.includes("moyu")) riskClass = "risk-high";
+      else if (tagStr.includes("moyu_reset")) riskClass = "risk-safe";
       return `
-        <button class="choice-btn" onclick="Game.resolveEvent('${event.id}', ${i})">
+        <button class="choice-btn ${riskClass}" onclick="Game.resolveEvent('${event.id}', ${i})">
           <span class="choice-label">${label}</span>
           <span>${ch.text}</span>
         </button>
@@ -1112,9 +1223,85 @@ const Game = {
       Player._eventTags.push(choice.tagEvent);
     }
 
+    // v0.7: 身份事件引擎 tag 处理（tag 可为字符串或数组）
+    const tags = Array.isArray(choice.tag) ? choice.tag : (choice.tag ? [choice.tag] : []);
+    if (tags.includes("moyu")) {
+      Player.moyuCount = (Player.moyuCount || 0) + 1;
+    }
+    if (tags.includes("moyu_reset")) {
+      Player.moyuCount = 0;
+    }
+    if (tags.includes("warn")) {
+      Player.moyuWarned = true;
+      toast("⚠️ 警告谈话已记录", "warning", 2000);
+    }
+    if (tags.includes("punish_salary")) {
+      Player.moyuPunished = true;
+      Player.moneyMonthlyPenalty = 15;
+      Player.moneyPenaltyMonths = 3;
+      toast("💸 绩效 -800 · 持续 3 个月", "warning", 2500);
+    }
+    if (tags.includes("punish_demote")) {
+      Player.moyuPunished = true;
+      Player.studyMonthlyPenalty = 2;
+      toast("📮 已调至收发室 · 复习效率-2/月（永久）", "warning", 2500);
+    }
+    if (tags.includes("fire")) {
+      $("eventBox").style.display = "none";
+      this.endGame("unemployed");
+      return;
+    }
+
     $("eventBox").style.display = "none";
     SaveSystem.autoSave("事件解决: " + event.title);
     this.startDayActions();
+  },
+
+  // v0.7: 身份专属事件引擎
+  triggerIdentityEvent(force = false) {
+    const ctx = this.makeContext();
+    const id = Player.identity;
+    if (!id) return false;
+
+    // 在职编外强制警告：moyuCount >= 3
+    if (id === "bianzhi" && Player.moyuCount >= 3 && !Player.moyuWarned) {
+      const ev = EVENTS.find(e => e.id === "bianzhi_warning");
+      if (ev) { Player.usedEvents.add(ev.id); this.showEvent(ev); return true; }
+    }
+    // 在职编外强制处罚：警告后 moyuCount >= 5
+    if (id === "bianzhi" && Player.moyuWarned && Player.moyuCount >= 5 && !Player.moyuPunished) {
+      const ev = EVENTS.find(e => e.id === "bianzhi_punishment");
+      if (ev) { Player.usedEvents.add(ev.id); this.showEvent(ev); return true; }
+    }
+
+    // 节奏控制：每身份隔2-5天
+    if (force) {} else {
+      const daysSince = Player.daysPlayed - (Player.lastIdentityEventDay || 0);
+      const interval = id === "bianzhi" ? 2 + Math.floor(Math.random() * 2)
+                    : id === "baoma" ? 2 + Math.floor(Math.random() * 2)
+                    : 3 + Math.floor(Math.random() * 2);
+      if (daysSince < interval) return false;
+    }
+
+    // 筛选该身份的事件
+    const candidates = EVENTS.filter(e => {
+      if (!e.id || !e.id.startsWith(id + "_")) return false;
+      if (Player.usedEvents.has(e.id)) return false;
+      if (e.cond && !e.cond(ctx)) return false;
+      return true;
+    });
+    if (candidates.length === 0) return false;
+
+    // 累积概率算法
+    const total = candidates.reduce((s, e) => s + (e.rarityWeight || e.weight || 1), 0);
+    let r = Math.random() * total;
+    const event = candidates.find(e => (r -= (e.rarityWeight || e.weight || 1)) < 0);
+    if (!event) return false;
+
+    Player.usedEvents.add(event.id);
+    Player.lastIdentityEventDay = Player.daysPlayed;
+    this.showEvent(event);
+    return true;
   },
 
   // ========== 崩溃 ==========
@@ -1238,6 +1425,14 @@ const Game = {
     Player._eventTriggeredToday = false;
     Player.actionLog = [];
     Player.pendingWake = true;
+    // v0.7: 身份事件引擎状态
+    Player.moyuCount = 0;           // 在职编外 摸鱼次数
+    Player.moyuWarned = false;      // 是否已被警告
+    Player.moyuPunished = false;    // 是否已被处罚
+    Player.studyMonthlyPenalty = 0; // 调岗debuff：永久月复习增幅-2
+    Player.moneyMonthlyPenalty = 0; // 降薪debuff：每月money-N
+    Player.moneyPenaltyMonths = 0;  // 降薪持续月数
+    Player.lastIdentityEventDay = 0;// 上次触发身份事件的天数
     const log = $("logBox");
     if (log) log.innerHTML = "";
     // P0: 清掉旧存档，新开一局不读旧档

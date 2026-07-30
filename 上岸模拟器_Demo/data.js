@@ -272,16 +272,29 @@ const WAKE_OPTIONS = [
 
 
 // ========== 身份 ==========
+// 7 种开局身份，覆盖考公人众生相
 const IDENTITIES = [
   { id: "985", emoji: "🎓", name: "985 应届生", desc: "高起点但迷茫",
     init: { study: 40, mood: 70, money: 50, relation: 60, sanity: 60 },
-    extra: "自带'学历光环'buff，亲戚期望值翻倍" },
+    extra: "自带'学历光环'buff，亲戚期望值翻倍", apMax: 5 },
+  { id: "xuandiao", emoji: "🎯", name: "选调生（应届限定）", desc: "名校直通车赛道",
+    init: { study: 50, mood: 65, money: 45, relation: 75, sanity: 65 },
+    extra: "走'定向快车道'，但只能报1个岗，错失再等三年", apMax: 5 },
   { id: "sanben", emoji: "📚", name: "三本二战", desc: "背水一战",
     init: { study: 55, mood: 40, money: 30, relation: 50, sanity: 50 },
-    extra: "经验丰富，但心态易崩" },
+    extra: "经验丰富，但心态易崩", apMax: 4 },
+  { id: "bianzhi", emoji: "🏛️", name: "在职编外", desc: "骑驴找马",
+    init: { study: 45, mood: 50, money: 55, relation: 60, sanity: 45 },
+    extra: "工资够活，但复习时间被会议和报表切碎", apMax: 3 },
+  { id: "haigui", emoji: "🌏", name: "海归硕士", desc: "花30万镀金，回来考三不限",
+    init: { study: 50, mood: 60, money: 35, relation: 45, sanity: 55 },
+    extra: "应届身份被留学耗尽，专业对口的岗全没了", apMax: 4 },
   { id: "35plus", emoji: "💼", name: "35+ 被裁", desc: "最后的救命稻草",
     init: { study: 30, mood: 35, money: 70, relation: 70, sanity: 40 },
-    extra: "钱多但时间紧，家庭压力拉满" },
+    extra: "钱多但时间紧，家庭压力拉满", apMax: 3 },
+  { id: "baoma", emoji: "👶", name: "全职宝妈再战", desc: "孩子睡后才开始",
+    init: { study: 35, mood: 45, money: 30, relation: 80, sanity: 30 },
+    extra: "婆婆旁敲侧击'考不上就去上班'，每天只睡5小时", apMax: 2 },
 ];
 
 // ========== 月份开局 ==========
@@ -1422,6 +1435,1045 @@ D. 她在暗示我多吃饭对学习好
         achievement: "你不是一个人在考公" }
     ]
   },
+
+  // ============ v0.7 身份事件引擎 · 7 身份 29 事件 ============
+
+  {
+    id: "bianzhi_meeting",
+    title: "会议开到一半",
+    rarity: "common",
+    rarityWeight: 3.0,
+    cond: (p) => p.identity === "bianzhi" && (p.moyuCount || 0) < 3,
+    desc: `周一上午 9:47。
+
+分管副科长正在念《2026 年第三季度工作要点》，
+你坐在会议室靠窗第三排。
+
+你的笔记本摊开着，
+左半边写着"推进 XX 工作落实"，
+右半边写着：
+<em>"言语理解 16 题：①并列 ②递进 ③转折……"</em>
+
+科长突然看向你：<em>"小张，你说一下？"</em>
+
+你大脑一片空白。
+
+——你是小张，还是小李？`,
+    choices: [
+      { label: "A", text: '"我同意王科的观点。"（万能句救场）',
+        effects: { relation: 5, study: -3 },
+        achievement: "废话文学大师" },
+      { label: "B", text: '念申论笔记："因为……所以……不仅……而且……"',
+        effects: { mood: 8, relation: -8 },
+        tag: "moyu", achievement: "申论已入脑" },
+      { label: "C", text: '装死，低头假装在记录——你真的在写申论',
+        effects: { study: 5, sanity: 5 },
+        tag: "moyu", achievement: "一心二用" }
+    ]
+  },
+
+  {
+    id: "bianzhi_overtime",
+    title: "加班通知",
+    rarity: "common",
+    rarityWeight: 2.5,
+    cond: (p) => p.identity === "bianzhi" && (p.moyuCount || 0) < 3,
+    desc: `18:23，钉钉消息：
+
+<em>"小张，这套报表今晚做完发我。我看你白天好像不太忙？"</em>
+
+——你白天档案夹下面压的是申论真题。
+
+你看了眼窗外。天已经黑了。
+隔壁工位老李在收拾东西，准备下班。
+
+他路过你身边时小声说：
+<em>"小张，年轻人别太实在。"</em>`,
+    choices: [
+      { label: "A", text: '"好的王科，马上做。"（老实加班到22:00）',
+        effects: { relation: 5, study: -3, money: 2, sanity: -5 },
+        achievement: "老实人" },
+      { label: "B", text: '"好的王科。"（报表开一半，切屏刷粉笔APP）',
+        effects: { study: 6, sanity: -5 },
+        tag: "moyu", achievement: "摸鱼加班王" },
+      { label: "C", text: '"王科我有点发烧，明天一早给您。"',
+        effects: { relation: -10, study: 8, mood: -3 },
+        tag: "moyu", achievement: "演技派" }
+    ]
+  },
+
+  {
+    id: "bianzhi_colleague",
+    title: "同事摸鱼被发现",
+    rarity: "rare",
+    rarityWeight: 1.0,
+    cond: (p) => p.identity === "bianzhi" && (p.moyuCount || 0) >= 1,
+    desc: `下午 3 点，办公室突然安静。
+
+科长站在隔壁工位老周身后。
+老周的屏幕上，是一套行测模考卷。
+
+科长没说话。
+老周也没说话。
+整个办公室没人说话。
+
+5 分钟后，老周被叫进科长办公室。
+门关上了。
+
+你低头看了眼自己抽屉里的粉笔5000题。
+——它好像在发光。`,
+    choices: [
+      { label: "A", text: '"太危险了，我以后工位上不刷题了"',
+        effects: { mood: 5, study: -3 },
+        tag: "moyu_reset", achievement: "悬崖勒马" },
+      { label: "B", text: '"老周太蠢了，我用手机刷谁发现得了"',
+        effects: { mood: -5, study: 3 },
+        tag: "moyu", achievement: "不知悔改" },
+      { label: "C", text: '"去厕所刷，厕所是安全的"',
+        effects: { study: 5, sanity: -3 },
+        tag: "moyu", achievement: "厕所战神" }
+    ]
+  },
+
+  {
+    id: "bianzhi_warning",
+    title: "⚠️ 警告谈话",
+    rarity: "epic",
+    rarityWeight: 1.0,
+    cond: (p) => p.identity === "bianzhi" && (p.moyuCount || 0) >= 3 && !p.moyuWarned,
+    desc: `周一早上 8:50，你还没坐下。
+
+科长从办公室探出头：<em>"小张，进来一下。"</em>
+
+桌上有一张纸。
+是你的钉钉使用时长截图——
+<em>粉笔APP：本周 16.7 小时。</em>
+<em>华图在线：本周 9.2 小时。</em>
+<em>中公题库：本周 4.1 小时。</em>
+
+加起来 30 小时。
+你这周总共上班 40 小时。
+
+科长摘下眼镜，搓了搓眼眶：
+<em>"小张，我不是不让你考。但你看看这个数……你是来上班的，还是来复习的？"</em>
+
+办公室外，老李在泡茶，耳朵竖着。`,
+    choices: [
+      { label: "A", text: '"科长我错了，再也不在工位刷题了。"',
+        effects: { relation: -5, mood: -10 },
+        tag: ["moyu_reset", "warn"], achievement: "认错保平安" },
+      { label: "B", text: '"这是我的午休和下班时间刷的。"（顶嘴）',
+        effects: { relation: -15, mood: -5 },
+        tag: "warn", achievement: "顶嘴艺术家" },
+      { label: "C", text: '"科长，我……我家里有点事，想请假。"',
+        effects: { mood: -15, relation: -10 },
+        tag: ["moyu_reset", "warn"], achievement: "逃避可耻但有用" }
+    ]
+  },
+
+  {
+    id: "bianzhi_punishment",
+    title: "处罚通知书",
+    rarity: "epic",
+    rarityWeight: 0.5,
+    cond: (p) => p.identity === "bianzhi" && p.moyuWarned && (p.moyuCount || 0) >= 5 && !p.moyuPunished,
+    desc: `你还在工位上刷题。
+
+突然钉钉弹出一条群通知：
+<em>"@张XX 请到人事部。"</em>
+
+你走进去。
+HR 递过来一份文件。
+
+<em>三种结局，根据你的态度与运气，随机抽取一个：</em>
+
+<strong>· 降薪 ·</strong> 工资条上"绩效 -800"。科长批注："望改进工作态度。"
+<strong>· 调岗 ·</strong> 被调到收发室。"先熟悉一下基层工作。"
+<strong>· 开除 ·</strong> HR 谈话："不是你不优秀，是这个岗位不适合你。"
+
+——命运即将揭晓。`,
+    choices: [
+      { label: "A", text: '"我接受降薪。"（咬牙签字）',
+        effects: { money: -15, mood: -10 },
+        tag: "punish_salary", achievement: "摸鱼的成本" },
+      { label: "B", text: '"我接受调岗。"（去收发室）',
+        effects: { study: 10, mood: -15, relation: -10 },
+        tag: "punish_demote", achievement: "收发室战神" },
+      { label: "C", text: '"我……我想起来了。妈叫我回家考公。"（抱着纸箱走人）',
+        effects: { study: -10, money: -20, sanity: 20, mood: -20 },
+        tag: "fire", achievement: "无业游民" }
+    ]
+  },
+
+  // ============ v0.7 身份事件引擎 · 985 应届生「精英诅咒」链 ============
+
+  {
+    id: "985_relatives",
+    title: "二姑的电话",
+    rarity: "common",
+    rarityWeight: 2.5,
+    cond: (p) => p.identity === "985" && p.month >= 4,
+    desc: `周五晚上 19:30，二姑来电。
+
+<em>"XX 啊，二姑问你个事。"</em>
+<em>"你那个 985 毕业的，怎么到现在还没考上？"</em>
+<em>"你表妹大专的，去年都进税务局了。"</em>
+
+你试图解释选调、国考、省考的区别。
+二姑：<em>"反正都是考试，大专都能上，你 985 还上不了？"</em>
+
+电话那头传来三舅的声音：
+<em>"是不是在学校没好好学？"</em>
+
+——你已经 4 个月没在学校了。`,
+    choices: [
+      { label: "A", text: '"二姑，考试不一样，我再努力。"',
+        effects: { mood: -8, relation: 3 },
+        achievement: "强颜欢笑" },
+      { label: "B", text: '"表妹那个是事业编，我这个是公务员。"',
+        effects: { mood: -3, relation: -5 },
+        achievement: "真相帝" },
+      { label: "C", text: '"二姑，我先挂了，要去自习了。"',
+        effects: { mood: -5, study: 3 },
+        achievement: "逃避可耻但有用" }
+    ]
+  },
+
+  {
+    id: "985_classmate",
+    title: "同学群有人晒offer",
+    rarity: "rare",
+    rarityWeight: 1.0,
+    cond: (p) => p.identity === "985" && p.month >= 6,
+    desc: `大学同学群，22:47。
+
+室友老王发了一条：
+<em>"兄弟们，上岸了！字节 SP offer，总包 60，base 北京。"</em>
+
+紧接着是 11 条"卧槽牛逼"。
+
+然后另一个室友：
+<em>"我也上岸了，美团，45 包。"</em>
+
+你看了眼自己的桌面——
+《行测 5000 题》做到第 1247 题，
+正确率 58%。
+
+老王 @了你：<em>"XX 呢？你之前不是说也在准备考试？"</em>
+
+你打了三个字"在准备"，又删了。
+最后发了一个"👍"。`,
+    choices: [
+      { label: "A", text: '"恭喜恭喜！"（发完默默关掉群聊）',
+        effects: { mood: -15, study: 5 },
+        achievement: "强颜欢笑" },
+      { label: "B", text: '"我考公，跟你们赛道不一样。"',
+        effects: { mood: -5, relation: -3 },
+        achievement: "赛道不同" },
+      { label: "C", text: "退出群聊",
+        effects: { mood: 5, relation: -10, study: 8 },
+        achievement: "及时止损" }
+    ]
+  },
+
+  {
+    id: "985_doubt",
+    title: "孔乙己的长衫",
+    rarity: "epic",
+    rarityWeight: 0.4,
+    cond: (p) => p.identity === "985" && p.study < 50 && p.month >= 8,
+    desc: `凌晨 2:13。
+
+你躺在宿舍床上，刷到一条小红书：
+
+<em>"985 毕业三年，考公二战失败。"</em>
+<em>"我妈问我，你那个文凭到底有什么用？"</em>
+
+你关掉手机。
+黑暗中，你想起毕业典礼那天，
+院长说：<em>"你们是国家的精英。"</em>
+
+现在你是精英。
+精英在背"加强……推进……落实……"。
+
+——孔乙己脱不下长衫。
+你也是。`,
+    choices: [
+      { label: "A", text: '"不行，我得考上，证明 985 不是白读的。"',
+        effects: { study: 15, mood: -10, sanity: -8 },
+        achievement: "长衫的重量" },
+      { label: "B", text: '"也许……我不该考公？"',
+        effects: { mood: 10, study: -10, sanity: 5 },
+        achievement: "动摇" },
+      { label: "C", text: '"管他什么长衫，先睡觉。"',
+        effects: { sanity: 10, mood: 3 },
+        achievement: "想开了" }
+    ]
+  },
+
+  {
+    id: "985_temptation",
+    title: "猎头的电话",
+    rarity: "rare",
+    rarityWeight: 0.8,
+    cond: (p) => p.identity === "985" && p.study > 60,
+    desc: `周三下午，陌生来电。
+
+<em>"XX 先生您好，我是 XX 猎头的。"</em>
+<em>"看到您的简历，有个岗位推荐——某互联网大厂，用户研究岗，35K×16，您有兴趣吗？"</em>
+
+你看了眼桌上的《申论范文 100 篇》。
+
+猎头继续：
+<em>"您之前实习过 XX，技术背景很好。现在互联网回暖了，机会不多了。"</em>
+
+——35K×16。
+考上了公务员，一个月到手也就 6-8K。
+
+你的手在抖。`,
+    choices: [
+      { label: "A", text: '"谢谢，我在考公，暂时不考虑。"',
+        effects: { mood: -5, study: 10 },
+        achievement: "不为五斗米" },
+      { label: "B", text: '"可以聊聊。"（加微信，留后路）',
+        effects: { mood: 8, study: -5 },
+        achievement: "骑驴找马" },
+      { label: "C", text: '"35K？我现在就去上班！"',
+        effects: { study: -20, money: 30 },
+        achievement: "真香" }
+    ]
+  },
+
+  // ============ v0.7 身份事件引擎 · 选调生「独木桥」链 ============
+
+  {
+    id: "xuandiao_rival",
+    title: "你的对手也是985",
+    rarity: "common",
+    rarityWeight: 2.5,
+    cond: (p) => p.identity === "xuandiao",
+    desc: `食堂吃饭，隔壁桌在聊天。
+
+<em>"你报哪儿？"</em>
+<em>"省厅。你呢？"</em>
+<em>"我也是省厅。"</em>
+
+——你愣住了。
+因为你也报了省厅。
+
+你回头看了眼说话的人。
+是你隔壁寝室的。
+绩点 3.92，学生会副主席，党员，还有一篇核心期刊。
+
+他冲你笑了笑：<em>"加油啊。"</em>
+
+——选调生，一个岗位只招 1 个人。
+你们中间，只有一个人能上岸。`,
+    choices: [
+      { label: "A", text: '"加油。"（微笑，心里在流血）',
+        effects: { mood: -8, study: 8 },
+        achievement: "笑着流泪" },
+      { label: "B", text: '"我不报省厅了，换个岗位。"',
+        effects: { mood: 5, study: -5, relation: 3 },
+        achievement: "战略转移" },
+      { label: "C", text: '"那就各凭本事了。"',
+        effects: { mood: -3, study: 12 },
+        achievement: "狭路相逢" }
+    ]
+  },
+
+  {
+    id: "xuandiao_giveup",
+    title: "放弃选调的同学去了腾讯",
+    rarity: "rare",
+    rarityWeight: 1.0,
+    cond: (p) => p.identity === "xuandiao" && p.month >= 5,
+    desc: `朋友圈。
+
+同专业的老李发了条动态：
+<em>"感谢腾讯爸爸收留，SP offer 到手。"</em>
+配图是一张工牌照片。
+
+你想起三个月前，他也在备考选调。
+你问他为什么不考了，他说：
+<em>"选调只能报一个岗，我赌不起。"</em>
+
+现在他在深圳，月薪 30K。
+你在自习室，正确率 61%。
+
+——他是聪明人吗？
+还是你是？`,
+    choices: [
+      { label: "A", text: '"他有他的路，我有我的。"',
+        effects: { mood: 3, study: 5 },
+        achievement: "各有各路" },
+      { label: "B", text: '"我是不是也该放弃选调？"',
+        effects: { mood: -10, study: -5 },
+        achievement: "动摇" },
+      { label: "C", text: '"公务员稳定，互联网说裁就裁。"',
+        effects: { mood: 8, study: 3 },
+        achievement: "自我说服" }
+    ]
+  },
+
+  {
+    id: "xuandiao_zhengshen",
+    title: "政审来了",
+    rarity: "epic",
+    rarityWeight: 0.3,
+    cond: (p) => p.identity === "xuandiao" && p.study > 70,
+    desc: `你进面了。
+
+政审材料要求：
+1. 本人无犯罪记录 ✓
+2. 直系亲属无犯罪记录
+3. 直系亲属无…………
+
+你打电话给爸：<em>"咱家有没有人犯过事？"</em>
+
+电话那头沉默了 5 秒：
+<em>"你大伯……2019 年醉驾，拘役两个月。"</em>
+
+——你的手开始抖。
+选调政审，查三代。
+大伯算直系亲属吗？`,
+    choices: [
+      { label: "A", text: '"查清楚了，大伯不算直系，虚惊一场。"',
+        effects: { mood: 10, relation: 5 },
+        achievement: "虚惊一场" },
+      { label: "B", text: '"完蛋了，大伯算直系，政审可能过不了。"',
+        effects: { mood: -20, study: -10 },
+        achievement: "天降横祸" },
+      { label: "C", text: '"打电话问招考单位，死马当活马医。"',
+        effects: { mood: -10, relation: 3 },
+        achievement: "不认命" }
+    ]
+  },
+
+  {
+    id: "xuandiao_rank",
+    title: "第83名/一个岗",
+    rarity: "rare",
+    rarityWeight: 0.8,
+    cond: (p) => p.identity === "xuandiao" && p.month >= 7,
+    desc: `笔试成绩出来了。
+
+你打开查询页面：
+<em>报考岗位：XX 省委组织部</em>
+<em>招录人数：1</em>
+<em>你的排名：第 83 名</em>
+<em>你的分数：132.5</em>
+<em>第一名分数：158.0</em>
+
+83 个人抢 1 个岗位。
+你差第一名 25.5 分。
+
+你关掉页面。
+又打开。
+关掉。
+打开。
+
+——83。
+这个数字像一把刀。`,
+    choices: [
+      { label: "A", text: '"明年……明年我一定要进前 3。"',
+        effects: { study: 20, mood: -10, sanity: -5 },
+        achievement: "83的阴影" },
+      { label: "B", text: '"也许该换个普通岗位。"',
+        effects: { mood: 5, study: -5 },
+        achievement: "战略转移" },
+      { label: "C", text: '"不考了，找工作去。"',
+        effects: { study: -15, money: 10 },
+        achievement: "放弃选调" }
+    ]
+  },
+
+  // ============ v0.7 身份事件引擎 · 三本二战「再来一年」链 ============
+
+  {
+    id: "sanben_yizhan",
+    title: "一战的影子",
+    rarity: "common",
+    rarityWeight: 2.5,
+    cond: (p) => p.identity === "sanben" && p.month >= 3,
+    desc: `凌晨 1 点，你睡不着。
+
+你打开手机备忘录：
+<em>"2025 年国考，差 0.4 分进面。"</em>
+
+0.4 分。
+一道选择题。
+一个粗心。
+一个涂错答题卡的格子。
+
+——你已经把这个数字刻在脑子里了。
+每次模考，你都会想起它。
+
+你关掉备忘录。
+打开题库。
+第一题：资料分析。
+根号下 117.64。`,
+    choices: [
+      { label: "A", text: '"0.4 分，今年补回来。"',
+        effects: { study: 12, mood: -5, sanity: -3 },
+        achievement: "0.4的执念" },
+      { label: "B", text: '"别想了，睡觉。"',
+        effects: { sanity: 8, study: -3 },
+        achievement: "放过自己" },
+      { label: "C", text: '"把备忘录删了。"',
+        effects: { mood: 10, study: 5 },
+        achievement: "告别过去" }
+    ]
+  },
+
+  {
+    id: "sanben_dorm",
+    title: "朋友圈上岸季",
+    rarity: "rare",
+    rarityWeight: 1.0,
+    cond: (p) => p.identity === "sanben" && p.month >= 4,
+    desc: `五月，朋友圈刷屏了。
+
+高中同学 A：<em>"上岸！XX 市住建局！"</em>
+高中同学 B：<em>"感谢党感谢政府，乡镇岗到手！"</em>
+大学室友 C：<em>"三战上岸，泪目。"</em>
+
+7 个人上岸，5 个晒了通知书。
+
+你翻了翻自己的朋友圈——
+上一条还是三个月前的"加油"。
+
+你妈发来微信：
+<em>"你看看人家小王，二本都上岸了。"</em>`,
+    choices: [
+      { label: "A", text: '"屏蔽他们，专注复习。"',
+        effects: { study: 10, mood: -5, relation: -5 },
+        achievement: "眼不见为净" },
+      { label: "B", text: '"给每个人都点个赞。"',
+        effects: { mood: -10, relation: 5, study: -3 },
+        achievement: "强颜欢笑" },
+      { label: "C", text: '"发一条：明年这个时候，轮到我。"',
+        effects: { mood: 5, study: 8 },
+        achievement: "立flag" }
+    ]
+  },
+
+  {
+    id: "sanben_degree",
+    title: "学历卡住的门",
+    rarity: "epic",
+    rarityWeight: 0.4,
+    cond: (p) => p.identity === "sanben" && p.study > 50,
+    desc: `岗位表下来了。
+
+你翻了 3 个小时，找到 5 个能报的岗位。
+
+其中一个你特别想报——
+<em>XX 市发改委，招 1 人，限本科以上学历。</em>
+
+你正要勾选，看到了备注栏：
+<em>"限全日制 985/211 院校毕业。"</em>
+
+——你是三本。
+全日制，但不是 985/211。
+
+你看了眼旁边那个不限学历的岗位：
+<em>XX 乡镇综合管理，招 3 人，报录比 1:487。</em>`,
+    choices: [
+      { label: "A", text: '"报三不限，跟 487 人卷。"',
+        effects: { mood: -8, study: 10 },
+        achievement: "我避他锋芒？" },
+      { label: "B", text: '"找个不限学历的县级岗。"',
+        effects: { mood: 3, study: 5 },
+        achievement: "降维求生" },
+      { label: "C", text: '"明年考研，先把学历刷上去。"',
+        effects: { mood: 10, study: -15 },
+        achievement: "赛道漂移" }
+    ]
+  },
+
+  {
+    id: "sanben_parents",
+    title: "妈说：要不先进厂吧",
+    rarity: "rare",
+    rarityWeight: 0.8,
+    cond: (p) => p.identity === "sanben" && p.sanity < 50,
+    desc: `晚上，你妈打来电话。
+
+前 5 分钟在问你吃没吃。
+第 6 分钟，她突然说：
+
+<em>"XX，妈跟你说个事。"</em>
+<em>"你张叔他们厂里招人，五险一金，月薪 5000。"</em>
+<em>"你要不……先去上班？考公的事……不急。"</em>
+
+——"不急"两个字，
+是你妈这辈子说过的最大的谎。
+
+因为你的存折上只剩 2000 块。
+因为你的同学已经工作一年了。
+因为你今年已经 25 了。`,
+    choices: [
+      { label: "A", text: '"妈，再给我一年，就一年。"',
+        effects: { mood: -10, study: 15 },
+        achievement: "最后一年" },
+      { label: "B", text: '"行，我去面试。"',
+        effects: { study: -20, money: 20 },
+        achievement: "放弃" },
+      { label: "C", text: '"妈，我没事，你别操心。"',
+        effects: { mood: 5, relation: 3, study: 5 },
+        achievement: "报喜不报忧" }
+    ]
+  },
+
+  // ============ v0.7 身份事件引擎 · 海归硕士「海带脱水」链 ============
+
+  {
+    id: "haigui_compare",
+    title: "同龄人的工资条",
+    rarity: "common",
+    rarityWeight: 2.5,
+    cond: (p) => p.identity === "haigui" && p.month >= 2,
+    desc: `初中同学聚会。
+
+你英国硕士，学的水务管理。
+学弟大专，做的销售。
+
+学弟举起酒杯：
+<em>"哥，我今年升 P6 了，年包 45，你呢？"</em>
+
+你笑了笑：<em>"还在考公。"</em>
+
+——"考公？"
+学弟的表情很微妙。
+那是一种"你花了 32 万，回来跟我一个大专生抢饭碗"的表情。
+
+你妈在旁边踢了你一脚。
+意思是：你当年非要出国。`,
+    choices: [
+      { label: "A", text: '"我出国是为了见识，不是为了就业。"',
+        effects: { mood: 3, sanity: -5 },
+        achievement: "我当年" },
+      { label: "B", text: '"考公稳定，你 P6 说裁就裁。"',
+        effects: { mood: -5, relation: -3 },
+        achievement: "自我说服" },
+      { label: "C", text: "一言不发，回家默默打开题库",
+        effects: { study: 12, mood: -8 },
+        achievement: "无声的回应" }
+    ]
+  },
+
+  {
+    id: "haigui_major",
+    title: "专业目录里的你",
+    rarity: "rare",
+    rarityWeight: 1.0,
+    cond: (p) => p.identity === "haigui" && p.month >= 3,
+    desc: `岗位表上，你在找"水务"相关的岗位。
+
+终于找到一个：
+<em>XX 水务局，水质监测岗，招 1 人。</em>
+专业要求：<em>"水务工程、水文与水资源工程"</em>
+
+你看了眼自己的毕业证：
+<em>"Water Management (MSc)"</em>
+
+——留服认证写的是"水务管理"。
+岗位要求写的是"水务工程"。
+
+差一个字。
+就差一个字。
+
+你打电话给招考单位：
+<em>"您好，我的专业是'水务管理'，能报吗？"</em>
+
+对方：<em>"不行，我们要求的是'水务工程'。"</em>`,
+    choices: [
+      { label: "A", text: '"那报三不限吧。"',
+        effects: { mood: -10, study: 8 },
+        achievement: "我避他锋芒？" },
+      { label: "B", text: '"写申诉材料，死马当活马医。"',
+        effects: { mood: -5, relation: 3, study: -3 },
+        achievement: "不认命" },
+      { label: "C", text: '"明年再考个国内硕士。"',
+        effects: { mood: 10, study: -15 },
+        achievement: "赛道漂移" }
+    ]
+  },
+
+  {
+    id: "haigui_oldclassmate",
+    title: "导师问你还考公吗",
+    rarity: "rare",
+    rarityWeight: 0.8,
+    cond: (p) => p.identity === "haigui" && p.month >= 6,
+    desc: `邮件提醒。
+
+发件人：Dr. Smith（你的英国导师）
+主题：How are you?
+
+<em>"Hi XX, hope you're doing well. Just checking in — are you still preparing for the civil service exam? I remember you mentioned it when you graduated. How's it going?"</em>
+
+你盯着这封邮件看了 10 分钟。
+
+你想回：
+<em>"Yes, still trying. It's harder than I thought."</em>
+
+但你打出来的字是：
+<em>"All good, working on it."</em>
+
+——你不知道怎么跟一个英国人解释，
+为什么一个水管理硕士，
+要去考一个跟水没关系的公务员。`,
+    choices: [
+      { label: "A", text: "如实回复：Still trying, harder than expected.",
+        effects: { mood: -5, sanity: 3 },
+        achievement: "真话哥" },
+      { label: "B", text: '"All good, will update you soon."（糊弄）',
+        effects: { mood: 3, relation: -3 },
+        achievement: "报喜不报忧" },
+      { label: "C", text: "不回邮件，关掉邮箱",
+        effects: { sanity: -3, study: 5 },
+        achievement: "鸵鸟政策" }
+    ]
+  },
+
+  {
+    id: "haigui_account",
+    title: "32万的账单",
+    rarity: "epic",
+    rarityWeight: 0.4,
+    cond: (p) => p.identity === "haigui" && p.money < 30,
+    desc: `你整理抽屉，翻出一张缴费单。
+
+<em>学费：£28,000</em>
+<em>生活费：£12,000</em>
+<em>合计：约 32 万人民币</em>
+
+你打开计算器：
+320000 ÷ 12 = 26666.67
+
+——如果你考上公务员，
+月薪到手 6000，
+不吃不喝 4.4 年才能回本。
+
+如果没考上……
+
+你把缴费单塞回抽屉。
+不敢算了。`,
+    choices: [
+      { label: "A", text: '"不算了，考上再说。"',
+        effects: { mood: 5, study: 10 },
+        achievement: "格局打开" },
+      { label: "B", text: '"我一定要考上，把这 32 万挣回来。"',
+        effects: { study: 15, mood: -10, sanity: -8 },
+        achievement: "32万的执念" },
+      { label: "C", text: '"也许该找个工作先回本。"',
+        effects: { study: -10, money: 15 },
+        achievement: "及时止损" }
+    ]
+  },
+
+  // ============ v0.7 身份事件引擎 · 35+ 被裁「末班车」链 ============
+
+  {
+    id: "35plus_health",
+    title: "体检报告",
+    rarity: "common",
+    rarityWeight: 2.5,
+    cond: (p) => p.identity === "35plus" && p.month >= 3,
+    desc: `体检报告出来了。
+
+<em>脂肪肝：轻度</em>
+<em>颈椎曲度：变直</em>
+<em>尿酸：487（偏高）</em>
+<em>血压：138/92</em>
+
+医生批注：<em>"建议规律作息，适当运动，低嘌呤饮食。"</em>
+
+——规律作息？
+你每天复习到凌晨 1 点。
+适当运动？
+你坐了一天没动。
+低嘌呤？
+你晚饭吃的是外卖火锅。
+
+你把报告折起来，压在《行测真题》下面。
+继续做题。`,
+    choices: [
+      { label: "A", text: '"身体要紧，每天跑步 30 分钟。"',
+        effects: { sanity: 10, study: -5, mood: 5 },
+        achievement: "健康第一" },
+      { label: "B", text: '"考完再说，先刷题。"',
+        effects: { study: 10, sanity: -8, mood: -3 },
+        achievement: "拿命换分" },
+      { label: "C", text: '"去医院开点药，继续。"',
+        effects: { money: -5, study: 5, sanity: -3 },
+        achievement: "带病备考" }
+    ]
+  },
+
+  {
+    id: "35plus_mortgage",
+    title: "房贷提醒",
+    rarity: "common",
+    rarityWeight: 2.0,
+    cond: (p) => p.identity === "35plus" && p.money < 60,
+    desc: `手机推送：
+
+<em>【XX 银行】您的房贷本月应还 8,742 元，请确保账户余额充足。</em>
+
+你打开银行 APP。
+余额：<em>12,306 元</em>
+
+还完这个月，还剩 4000。
+下个月的生活费：3000。
+——你还能撑一个月。
+
+你看了眼房贷详情：
+<em>贷款余额：1,287,000 元</em>
+<em>剩余期限：216 个月（18 年）</em>
+
+18 年。
+你现在 36 岁。
+还完的时候，你 54 岁。`,
+    choices: [
+      { label: "A", text: '"省着花，把生活费压到 2000。"',
+        effects: { money: 5, mood: -10, sanity: -5 },
+        achievement: "紧日子" },
+      { label: "B", text: '"找媳妇商量，看她能不能多承担点。"',
+        effects: { relation: -5, money: 10, mood: -3 },
+        achievement: "分担" },
+      { label: "C", text: '"不管了，先复习。"',
+        effects: { study: 8, mood: -15 },
+        achievement: "鸵鸟政策" }
+    ]
+  },
+
+  {
+    id: "35plus_wife",
+    title: "媳妇的Excel",
+    rarity: "rare",
+    rarityWeight: 1.0,
+    cond: (p) => p.identity === "35plus" && p.month >= 5,
+    desc: `晚饭后，媳妇把笔记本电脑转过来。
+
+屏幕上是一张 Excel 表：
+<em>月份 | 收入 | 支出 | 结余 | 备注</em>
+<em>1月  | 8500 | 9200 | -700 | 你的失业金</em>
+<em>2月  | 8500 | 8800 | -300 | </em>
+<em>3月  | 8500 | 9500 | -1000| 孩子辅导班</em>
+<em>4月  | 8500 | 10200| -1700| 车险+物业费</em>
+<em>5月  | 8500 | 9000 | -500 | </em>
+
+合计：<em>-4200</em>
+
+媳妇没说话。
+她只是把表打开，然后去厨房洗碗了。
+
+水声很大。
+——比平时大。`,
+    choices: [
+      { label: "A", text: '"我去找个工作，边工作边考。"',
+        effects: { money: 15, study: -10, mood: 5 },
+        achievement: "妥协" },
+      { label: "B", text: '"再给我 3 个月，考完省考。"',
+        effects: { relation: -10, study: 15, mood: -8 },
+        achievement: "最后通牒" },
+      { label: "C", text: '"把表关了，不看了。"',
+        effects: { relation: -15, mood: -10, study: 5 },
+        achievement: "鸵鸟政策" }
+    ]
+  },
+
+  {
+    id: "35plus_zeroling",
+    title: "被00后反向带教",
+    rarity: "rare",
+    rarityWeight: 0.8,
+    cond: (p) => p.identity === "35plus" && p.month >= 6,
+    desc: `你在图书馆自习。
+
+隔壁坐了个 00 后，也在备考。
+他看你做资料分析，凑过来：
+
+<em>"哥，你这个速算方法过时了，用尾数法更快。"</em>
+<em>"哥，申论别背范文了，现在考的是材料归纳。"</em>
+<em>"哥，你这个字……阅卷老师看不清的。"</em>
+
+你愣住了。
+
+——你工作 10 年，带过 20 个实习生。
+现在一个 00 后在教你做题。
+
+他看你脸色不对，补了一句：
+<em>"哥，没事，我去年也差 2 分。"</em>`,
+    choices: [
+      { label: "A", text: '"谢谢小兄弟，跟你学了不少。"',
+        effects: { study: 15, mood: -5, relation: 5 },
+        achievement: "活到老学到老" },
+      { label: "B", text: '"不用了，我有自己的方法。"',
+        effects: { mood: -8, study: 3 },
+        achievement: "长者的尊严" },
+      { label: "C", text: '"兄弟，加个微信，以后多交流。"',
+        effects: { study: 10, relation: 8, mood: 3 },
+        achievement: "以老卖小" }
+    ]
+  },
+
+  // ============ v0.7 身份事件引擎 · 全职宝妈「碎片战争」链 ============
+
+  {
+    id: "baoma_baby",
+    title: "孩子又发烧了",
+    rarity: "common",
+    rarityWeight: 3.0,
+    cond: (p) => p.identity === "baoma",
+    desc: `凌晨 2:47。
+
+孩子哭了。
+你摸了摸额头——烫。
+
+体温计：<em>38.2℃</em>
+
+——你的手机屏幕还亮着。
+上面是一道资料分析题，做了一半。
+
+你关掉手机，抱起孩子。
+喂药，擦身，哄睡。
+40 分钟后，孩子睡了。
+
+你看了眼时间：3:31。
+距离孩子下次醒：大概 2 小时。
+
+你有两个选择：
+睡觉，还是做题？`,
+    choices: [
+      { label: "A", text: '"做题，白天没时间。"',
+        effects: { study: 10, sanity: -12, mood: -5 },
+        achievement: "凌晨刷题机" },
+      { label: "B", text: '"睡觉，我得先活着。"',
+        effects: { sanity: 12, study: -3, mood: 3 },
+        achievement: "放过自己" },
+      { label: "C", text: '"边喂奶边做题。"',
+        effects: { study: 5, sanity: -8 },
+        achievement: "一心二用" }
+    ]
+  },
+
+  {
+    id: "baoma_motherlaw",
+    title: "婆婆的微信",
+    rarity: "common",
+    rarityWeight: 2.5,
+    cond: (p) => p.identity === "baoma" && p.month >= 3,
+    desc: `婆婆发来一条微信语音，58 秒。
+
+你点开：
+<em>"XX 啊，你表姐家那个，已经在财政局上班了。"</em>
+<em>"人家也是宝妈，孩子比你还小。"</em>
+<em>"你那个考公……准备得怎么样了？"</em>
+<em>"要不……先找个班上？"</em>
+<em>"孩子他爸一个人养家，也辛苦……"</em>
+
+——58 秒。
+她说了 5 件事，没有一件是问你累不累。
+
+你把语音转文字，看了 3 遍。
+然后打字：
+<em>"妈，我知道了。"</em>
+
+发送。`,
+    choices: [
+      { label: "A", text: '"知道了妈，我在努力。"',
+        effects: { mood: -10, relation: 3, study: 5 },
+        achievement: "报喜不报忧" },
+      { label: "B", text: '"妈，表姐有婆婆帮忙带孩子，我没有。"',
+        effects: { mood: -5, relation: -8 },
+        achievement: "真话伤人" },
+      { label: "C", text: "不回复，把手机扣下，继续做题",
+        effects: { study: 8, mood: -3, relation: -5 },
+        achievement: "冷处理" }
+    ]
+  },
+
+  {
+    id: "baoma_mirror",
+    title: "镜子里的自己",
+    rarity: "rare",
+    rarityWeight: 0.8,
+    cond: (p) => p.identity === "baoma" && p.sanity < 50,
+    desc: `洗完澡，你站在镜子前。
+
+你看了很久。
+
+——你 36 岁了。
+产后身材还没恢复。
+眼角有了细纹。
+头发比大学少了一半。
+
+你想起 25 岁那年，
+也是站在镜子前，
+觉得自己什么都能做。
+
+现在你觉得自己什么都做不了。
+考公考了两年，
+孩子一岁了，
+存款不到 5 万。
+
+镜子里的你，也在看你。
+——她好像想说什么。`,
+    choices: [
+      { label: "A", text: '"我还年轻，还能拼。"',
+        effects: { mood: 8, study: 10 },
+        achievement: "我还能行" },
+      { label: "B", text: '"也许……我不该考了。"',
+        effects: { mood: 5, study: -15, sanity: 5 },
+        achievement: "动摇" },
+      { label: "C", text: '"先把脸洗了，继续。"',
+        effects: { sanity: 5, study: 5, mood: -3 },
+        achievement: "擦干眼泪" }
+    ]
+  },
+
+  {
+    id: "baoma_support",
+    title: "老公说：别考了",
+    rarity: "epic",
+    rarityWeight: 0.4,
+    cond: (p) => p.identity === "baoma" && p.month >= 6 && p.sanity < 40,
+    desc: `晚上 11 点，孩子睡了。
+
+你在客厅做题。
+老公从卧室出来，给你倒了杯水。
+
+他坐下来，沉默了一会儿，说：
+
+<em>"XX，要不……别考了。"</em>
+
+你抬头。
+他接着说：
+
+<em>"我多加几个班，够花的。"</em>
+<em>"你太累了。"</em>
+<em>"我看着……心疼。"</em>
+
+——这是两年来，他第一次说这种话。
+
+你的笔停了。
+眼泪掉在资料分析第三题上。`,
+    choices: [
+      { label: "A", text: '"不行，我已经走到这了，不能放弃。"',
+        effects: { study: 15, mood: 10, relation: 10 },
+        achievement: "不负此生" },
+      { label: "B", text: '"好……我不考了。"',
+        effects: { study: -20, mood: 15, sanity: 10, relation: 15 },
+        achievement: "放下" },
+      { label: "C", text: '"再考最后一次，就一次。"',
+        effects: { study: 10, mood: 5, relation: 8 },
+        achievement: "最后一次" }
+    ]
+  },
 ];
 
 // ========== 成就库 ==========
@@ -1461,6 +2513,75 @@ const ACHIEVEMENTS = {
   "报喜不报忧": { desc: "'妈，我没事'——你发了 8 次。" },
   "我不要你管": { desc: "表妹的好意，也是一种压力。" },
   "蒜鸟蒜鸟": { desc: "算了算了，佛系备考。" },
+  "回家建设家乡": { desc: "选调生的浪漫：回到十八线小城，做一辈子公务员。" },
+  "赌徒": { desc: "选调赌沿海——单车变摩托，或变共享单车。" },
+  "既要又要": { desc: "选调生三连：我要稳定、我要高薪、我要大城市。" },
+  "废话文学大师": { desc: "在编外的生存之道：领导讲话，你点头。" },
+  "申论已入脑": { desc: "会议发言自动'因为所以不仅而且'——职业病晚期。" },
+  "一心二用": { desc: "开着会写着申论——打工人最高境界。" },
+  "我当年": { desc: "海归口头禅：'我当年……'——后面是 32 万的学费。" },
+  "无声的回应": { desc: "海归最好的回应：上岸通知书。" },
+  "格局打开": { desc: "给 P7 同学发红包，承认自己选错了。" },
+  "凌晨刷题机": { desc: "全职宝妈的战斗力：错题本记到凌晨 5 点。" },
+  "放过自己": { desc: "全职妈妈躺平也是上岸——上岸到床上的那种。" },
+  "我不是一个人": { desc: "他回：'不想考就不考了'——这句话值 32 万。" },
+  // v0.7 新增 58 个身份专属成就
+  "老实人": { desc: "老实加班到 22:00——公务员就要老实。" },
+  "摸鱼加班王": { desc: "报表开一半，粉笔开一半——打工人最高境界。" },
+  "演技派": { desc: '"王科，我发烧了"——演技 99 分。' },
+  "不知悔改": { desc: "同事被抓了，你还在刷——勇士。" },
+  "厕所战神": { desc: "厕所是你的第二自习室。" },
+  "认错保平安": { desc: "警告谈话后，你选择了认错。" },
+  "顶嘴艺术家": { desc: '"这是我的午休时间"——你很勇敢。' },
+  "摸鱼的成本": { desc: "绩效 -800，够报一个粉笔系统班。" },
+  "收发室战神": { desc: "被调到收发室，但你有大把时间了。" },
+  "无业游民": { desc: "被开除那天，外面在下雨。" },
+  "真相帝": { desc: "给二姑科普事业编和公务员的区别。" },
+  "强颜欢笑": { desc: '发"👍"，关掉群聊。' },
+  "赛道不同": { desc: "我考公，跟你们赛道不一样。" },
+  "及时止损": { desc: "退出了那个让你焦虑的群。" },
+  "长衫的重量": { desc: "985 的文凭，是盔甲也是枷锁。" },
+  "动摇": { desc: "也许我不该考公？" },
+  "不为五斗米": { desc: "35K？不，我要为人民服务。" },
+  "骑驴找马": { desc: "加了猎头微信，留条后路。" },
+  "真香": { desc: "35K×16？我现在就去上班！" },
+  "笑着流泪": { desc: '"加油。"——心里在流血。' },
+  "战略转移": { desc: "换个岗位，也是一种智慧。" },
+  "狭路相逢": { desc: '"那就各凭本事了。"' },
+  "各有各路": { desc: "他有他的路，你有你的。" },
+  "自我说服": { desc: '"公务员稳定，互联网说裁就裁。"' },
+  "虚惊一场": { desc: "大伯不算直系，吓死我了。" },
+  "天降横祸": { desc: "大伯醉驾，政审过不了。" },
+  "不认命": { desc: "打电话问招考单位，死马当活马医。" },
+  "83的阴影": { desc: "第 83 名，这个数字刻在心里了。" },
+  "放弃选调": { desc: "不考了，找工作去。" },
+  "0.4的执念": { desc: "0.4 分，一道选择题，一个格子。" },
+  "告别过去": { desc: "把备忘录删了，从头开始。" },
+  "眼不见为净": { desc: "屏蔽了所有上岸的朋友圈。" },
+  "立flag": { desc: '"明年这个时候，轮到我。"' },
+  "我避他锋芒？": { desc: "勇士的自我安慰——你报了三不限，全员绞肉机。" },
+  "降维求生": { desc: "找个不限学历的县级岗。" },
+  "最后一年": { desc: '"妈，再给我一年，就一年。"' },
+  "放弃": { desc: '"行，我去面试。"' },
+  "报喜不报忧": { desc: '"妈，我没事"——你发了 8 次。' },
+  "32万的执念": { desc: "一定要考上，把这 32 万挣回来。" },
+  "健康第一": { desc: "每天跑步 30 分钟。" },
+  "拿命换分": { desc: '"考完再说，先刷题。"' },
+  "带病备考": { desc: "开点药，继续。" },
+  "紧日子": { desc: "把生活费压到 2000。" },
+  "分担": { desc: "让媳妇多承担点。" },
+  "妥协": { desc: '"我去找个工作，边工作边考。"' },
+  "最后通牒": { desc: '"再给我 3 个月，考完省考。"' },
+  "活到老学到老": { desc: '"谢谢小兄弟，跟你学了不少。"' },
+  "长者的尊严": { desc: '"不用了，我有自己的方法。"' },
+  "以老卖小": { desc: '"兄弟，加个微信。"' },
+  "我还能行": { desc: '"我还年轻，还能拼。"' },
+  "擦干眼泪": { desc: '"先把脸洗了，继续。"' },
+  "真话伤人": { desc: '"表姐有婆婆帮忙带孩子，我没有。"' },
+  "冷处理": { desc: "不回复，继续做题。" },
+  "不负此生": { desc: '"我已经走到这了，不能放弃。"' },
+  "放下": { desc: '"好……我不考了。"' },
+  "最后一次": { desc: '"再考最后一次，就一次。"' },
   "正统学徒": { desc: "粉笔+中公+华图，传统考公路线。" },
   "邪修入门": { desc: "你选择了一条不走寻常路的备考方式。" },
   "邪修出关": { desc: "食堂大妈都成了你的言语理解陪练。" },
@@ -1654,6 +2775,39 @@ const ENDINGS = [
 你点了点头。
 
 <em>你又打开了粉笔 APP。</em>`,
+  },
+  {
+    id: "unemployed",
+    emoji: "📦",
+    title: "无业游民",
+    sub: "被开除那天，外面在下雨",
+    type: "bad",
+    cond: () => false,  // 永远不通过cond触发，仅由 bianzhi_punishment 选项C forceId 触发
+    narrative: `你抱着纸箱走出大楼。
+
+外面在下雨。
+雨不大，但你没带伞。
+
+你站在公司楼下，
+回头看了一眼这栋楼。
+这栋楼你每天来，每天走，
+但今天——你不属于这里了。
+
+你打开手机：
+<em>0 条未读消息。</em>
+
+你打开日历：
+<em>下周一本来要交的报表——空白。</em>
+
+——你现在是一个无业游民了。
+但你有大把的时间考公了。
+整整 8 小时的工作日，全是复习时间。
+
+你苦笑了一下：
+<em>"我终于可以专心考公了。"</em>
+
+<em>（但你的社保断了，公积金没了，简历上多了一个"被开除"。）</em>`,
+    autoAchievements: ["无业游民", "我终于可以专心考公了"],
   },
   {
     id: "dazhuan",

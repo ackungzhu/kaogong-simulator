@@ -624,6 +624,102 @@ body::before {
   background: linear-gradient(90deg, var(--accent), var(--gold));
 }
 
+/* v0.7 身份专属事件样式 */
+.event-box.identity-event {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, white, #fff7d6 100%);
+}
+.event-box.identity-event::before {
+  content: attr(data-identity-tag);
+  background: linear-gradient(90deg, var(--gold), var(--accent));
+  font-weight: 900;
+}
+/* v0.7 关键剧情事件（警告/处罚） */
+.event-box.critical-event {
+  border: 3px solid var(--accent);
+  background: #fff5f5;
+  box-shadow: 4px 4px 0 #7a0000;
+  animation: criticalShake 0.5s ease-out;
+}
+.event-box.critical-event::before {
+  content: "⚠️ 关键剧情";
+  background: var(--accent);
+  color: white;
+  font-weight: 900;
+}
+@keyframes criticalShake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+  100% { transform: translateX(0); }
+}
+
+/* v0.7 摸鱼/风险选项标识 */
+.choice-btn.risk-high {
+  border-left: 4px solid var(--accent) !important;
+  background: #fff8f8 !important;
+  position: relative;
+}
+.choice-btn.risk-high::after {
+  content: "⚠️ 摸鱼风险";
+  position: absolute; top: 8px; right: 10px;
+  font-size: 10px; color: var(--accent);
+  font-weight: 900; letter-spacing: 1px;
+}
+.choice-btn.risk-safe {
+  border-left: 4px solid var(--green) !important;
+  background: #f8fff8 !important;
+  position: relative;
+}
+.choice-btn.risk-safe::after {
+  content: "✓ 安全";
+  position: absolute; top: 8px; right: 10px;
+  font-size: 10px; color: var(--green);
+  font-weight: 900; letter-spacing: 1px;
+}
+
+/* v0.7 状态栏摸鱼指示器 */
+.moyu-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 10px;
+  margin-top: 6px;
+  background: #fffbe6;
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  color: var(--ink-soft);
+  transition: all 0.3s;
+}
+.moyu-indicator.warn { background: #fff0d6; border-color: #ff7a00; color: #ff7a00; }
+.moyu-indicator.danger { background: #ffe6e6; border-color: var(--accent); color: var(--accent); animation: moyuPulse 1s infinite; }
+@keyframes moyuPulse {
+  50% { opacity: 0.6; transform: scale(0.98); }
+}
+
+/* v0.7 debuff 徽章 */
+.debuff-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  justify-content: center;
+}
+.badge-debuff {
+  background: #fff5f5;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  animation: blink 1.5s infinite;
+}
+@keyframes blink { 50% { opacity: 0.6; } }
+
 /* ============================================ */
 /* ========== v0.3 每日行动点 系统 ============ */
 /* ============================================ */
