@@ -123,7 +123,7 @@
 
   <!-- 结局 -->
   <section id="screen-ending" class="screen">
-    <div class="container ending-container">
+    <div class="container ending-container" id="endingContainer">
       <div class="ending-emoji" id="endingEmoji"></div>
       <h1 class="ending-title" id="endingTitle"></h1>
       <div class="ending-sub" id="endingSub"></div>
@@ -135,7 +135,8 @@
       </div>
       <div class="ending-buttons">
         <button class="btn-main" onclick="Game.reset()">再来一局</button>
-        <button class="btn-secondary" onclick="Share.screenshot()">截图分享</button>
+        <button class="btn-secondary" onclick="Share.screenshot()">📸 分享我的考公人档案</button>
+        <button class="btn-secondary" onclick="Share.copyText()">📋 复制文案分享</button>
       </div>
       <div class="footer-text">《上岸模拟器》v0.5</div>
     </div>
@@ -150,6 +151,9 @@
 
 <script src="data.js?v=0.5.0"></script>
 <script src="game.js?v=0.5.0"></script>
+
+<!-- html2canvas 图片分享 v0.5 -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <!-- 模态遮罩层 v0.5 (P0 UI 抽象) -->
 <div id="modalOverlay" class="modal-overlay"></div>

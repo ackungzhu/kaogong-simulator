@@ -1175,25 +1175,87 @@ const AI = {
 };
 
 const Share = {
+  // v0.5: 升级为支持图片分享（html2canvas + canvas API 双重降级）
   screenshot() {
+    // 优先尝试 html2canvas 图片模式
+    if (typeof html2canvas !== "undefined" && $("endingContainer")) {
+      this._screenshotImage();
+    } else {
+      this._screenshotText();
+    }
+  },
+
+  async _screenshotImage() {
+    try {
+      const target = $("endingContainer") || $("screen-ending");
+      toast("🎨 正在生成分享图...", "achievement", 1500);
+      const canvas = await html2canvas(target, {
+        backgroundColor: "#fdf8ee",
+        scale: window.devicePixelRatio || 2,
+        useCORS: true,
+        logging: false,
+      });
+      // 转 blob 并下载
+      canvas.toBlob((blob) => {
+        if (!blob) { this._screenshotText(); return; }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `上岸模拟器-${Player.identity || "玩家"}-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast("✓ 分享图已下载", "achievement", 2000);
+      }, "image/png");
+    } catch (e) {
+      console.warn("html2canvas 失败, 降级为文本", e);
+      this._screenshotText();
+    }
+  },
+
+  _screenshotText() {
+    const text = this._buildText();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => toast("✓ 已复制分享文案"))
+                         .catch(() => toast("请手动长按复制"));
+    } else toast("浏览器不支持复制");
+  },
+
+  // 公共：纯文本复制按钮
+  copyText() {
+    const text = this._buildText();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => toast("✓ 文案已复制，去小红书/微博粘贴吧"))
+                         .catch(() => toast("请手动长按复制"));
+    } else {
+      // 降级：弹一个textarea让用户复制
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); toast("✓ 已复制"); }
+      catch(e) { toast("请手动复制"); }
+      document.body.removeChild(ta);
+    }
+  },
+
+  _buildText() {
     const achs = Array.from(Player.achievements).map(a => `🏅 ${a}`).join("\n");
     const title = $("endingTitle").textContent;
     const sub = $("endingSub").textContent;
     const tagInfo = Player.lifeTags.length
       ? "标签：" + Player.lifeTags.map(id => LIFE_TAGS.find(x => x.id === id)?.name).join("、") : "";
-    const text = `《上岸模拟器 v0.5》
-结局：【${title}】 ${sub}
-
-${tagInfo}
-数值：📚${Player.stats.study} ❤️${Player.stats.mood} 💰${Player.stats.money} 🤝${Player.stats.relation} 🧠${Player.stats.sanity}
-
-${achs ? "成就：\n" + achs : ""}
-
-#上岸模拟器 #考公人`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(() => toast("✓ 已复制分享文案"))
-                         .catch(() => toast("请手动长按复制"));
-    } else toast("浏览器不支持复制");
+    const days = Player.daysPlayed;
+    const months = Math.floor(days / 30);
+    return `《上岸模拟器 v0.5》#考公人档案
+━━━━━━━━━━━━━━━━━━━━
+🎭 结局：【${title}】 ${sub}
+📅 备考 ${days} 天（${months} 个月）
+${tagInfo ? "🏷️ " + tagInfo + "\n" : ""}📊 数值：📚${Player.stats.study} ❤️${Player.stats.mood} 💰${Player.stats.money} 🤝${Player.stats.relation} 🧠${Player.stats.sanity}
+${achs ? "\n🏅 成就：\n" + achs + "\n" : ""}
+━━━━━━━━━━━━━━━━━━━━
+#上岸模拟器 #考公 #公考 #行测 #申论 #考公人`;
   }
 };
 
