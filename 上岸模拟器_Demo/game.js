@@ -1,5 +1,6 @@
 /**
- * 《上岸模拟器》 v0.7 · 核心逻辑
+ * 《上岸模拟器》 v0.7.1 · 核心逻辑
+ * v0.7.1: 摸鱼链节奏优化（5次警告/7次处罚）+ ☕图标+ 985事件重写+ 移动端防挤压
  * v0.7: 身份专属事件引擎 + 7身份29事件 + 58新成就 + 摸鱼越界惩罚系统
  * v0.6: 续读功能 + 事件频率+权重修复 + 模态关闭手势 + 成就bug修复
  * v0.5: 存档系统 + 模态遮罩 + 执行脉冲 + UI局部更新 + 事件稀有度引擎
@@ -721,10 +722,10 @@ const Game = {
     // 摸鱼指示器（仅在职编外）
     if (Player.identity === "bianzhi") {
       const cnt = Player.moyuCount || 0;
-      const warnClass = cnt >= 3 ? "danger" : (cnt >= 2 ? "warn" : "");
-      const warnText = cnt >= 3 ? `🐟 摸鱼 ${cnt}/3 · ⚠️ 已被约谈！`
-                     : cnt >= 2 ? `🐟 摸鱼 ${cnt}/3 · 危险边缘`
-                     : `🐟 摸鱼 ${cnt}/3`;
+      const warnClass = cnt >= 5 ? "danger" : (cnt >= 3 ? "warn" : "");
+      const warnText = cnt >= 5 ? `☕ 摸鱼 ${cnt}/5 · ⚠️ 已被约谈！`
+                     : cnt >= 3 ? `☕ 摸鱼 ${cnt}/5 · 危险边缘`
+                     : `☕ 摸鱼 ${cnt}/5`;
       html += `<div class="moyu-indicator ${warnClass}">${warnText}</div>`;
     }
     // debuff 徽章
@@ -1263,13 +1264,13 @@ const Game = {
     const id = Player.identity;
     if (!id) return false;
 
-    // 在职编外强制警告：moyuCount >= 3
-    if (id === "bianzhi" && Player.moyuCount >= 3 && !Player.moyuWarned) {
+    // 在职编外强制警告：moyuCount >= 5（v0.7.1 调整为 5 次，留出体验完整链条的时间）
+    if (id === "bianzhi" && Player.moyuCount >= 5 && !Player.moyuWarned) {
       const ev = EVENTS.find(e => e.id === "bianzhi_warning");
       if (ev) { Player.usedEvents.add(ev.id); this.showEvent(ev); return true; }
     }
-    // 在职编外强制处罚：警告后 moyuCount >= 5
-    if (id === "bianzhi" && Player.moyuWarned && Player.moyuCount >= 5 && !Player.moyuPunished) {
+    // 在职编外强制处罚：警告后 moyuCount >= 7
+    if (id === "bianzhi" && Player.moyuWarned && Player.moyuCount >= 7 && !Player.moyuPunished) {
       const ev = EVENTS.find(e => e.id === "bianzhi_punishment");
       if (ev) { Player.usedEvents.add(ev.id); this.showEvent(ev); return true; }
     }

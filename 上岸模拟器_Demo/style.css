@@ -700,15 +700,27 @@ body::before {
   50% { opacity: 0.6; transform: scale(0.98); }
 }
 
-/* v0.7 debuff 徽章 */
-.debuff-badges {
+/* v0.7 状态栏摸鱼指示器 */
+.moyu-indicator {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
+  align-items: center;
   justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 10px;
+  margin-top: 6px;
+  background: #fffbe6;
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+  color: var(--ink-soft);
+  transition: all 0.3s;
+  max-width: 100%;
+  flex-wrap: wrap;
+  text-align: center;
 }
 .badge-debuff {
+  display: inline-flex;
+  align-items: center;
   background: #fff5f5;
   border: 1px solid var(--accent);
   color: var(--accent);
@@ -717,6 +729,10 @@ body::before {
   font-size: 11px;
   font-weight: 700;
   animation: blink 1.5s infinite;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 @keyframes blink { 50% { opacity: 0.6; } }
 

@@ -1477,7 +1477,7 @@ D. 她在暗示我多吃饭对学习好
     title: "加班通知",
     rarity: "common",
     rarityWeight: 2.5,
-    cond: (p) => p.identity === "bianzhi" && (p.moyuCount || 0) < 3,
+    cond: (p) => p.identity === "bianzhi" && (p.moyuCount || 0) < 5,
     desc: `18:23，钉钉消息：
 
 <em>"小张，这套报表今晚做完发我。我看你白天好像不太忙？"</em>
@@ -1540,8 +1540,11 @@ D. 她在暗示我多吃饭对学习好
     title: "⚠️ 警告谈话",
     rarity: "epic",
     rarityWeight: 1.0,
-    cond: (p) => p.identity === "bianzhi" && (p.moyuCount || 0) >= 3 && !p.moyuWarned,
+    cond: (p) => p.identity === "bianzhi" && (p.moyuCount || 0) >= 5 && !p.moyuWarned,
     desc: `周一早上 8:50，你还没坐下。
+
+——上周老周被调岗到 XX 分公司了。
+今天轮到你了。
 
 科长从办公室探出头：<em>"小张，进来一下。"</em>
 
@@ -1576,7 +1579,7 @@ D. 她在暗示我多吃饭对学习好
     title: "处罚通知书",
     rarity: "epic",
     rarityWeight: 0.5,
-    cond: (p) => p.identity === "bianzhi" && p.moyuWarned && (p.moyuCount || 0) >= 5 && !p.moyuPunished,
+    cond: (p) => p.identity === "bianzhi" && p.moyuWarned && (p.moyuCount || 0) >= 7 && !p.moyuPunished,
     desc: `你还在工位上刷题。
 
 突然钉钉弹出一条群通知：
@@ -1609,70 +1612,83 @@ HR 递过来一份文件。
 
   {
     id: "985_relatives",
-    title: "二姑的电话",
+    title: "毕业季的同学群",
     rarity: "common",
     rarityWeight: 2.5,
     cond: (p) => p.identity === "985" && p.month >= 4,
-    desc: `周五晚上 19:30，二姑来电。
+    desc: `周五晚上 19:30，室友老王在寝室群里发了一条：
 
-<em>"XX 啊，二姑问你个事。"</em>
-<em>"你那个 985 毕业的，怎么到现在还没考上？"</em>
-<em>"你表妹大专的，去年都进税务局了。"</em>
+<em>"兄弟们，我字节 SP，60 包，base 北京。"</em>
 
-你试图解释选调、国考、省考的区别。
-二姑：<em>"反正都是考试，大专都能上，你 985 还上不了？"</em>
+11 条"卧槽牛逼"刷屏。
 
-电话那头传来三舅的声音：
-<em>"是不是在学校没好好学？"</em>
+然后另一个室友：
+<em>"我也上岸了，美团，45 包。"</em>
 
-——你已经 4 个月没在学校了。`,
+老王 @你：<em>"XX 呢？听说你也在准备考试？"</em>
+
+你打了三个字"在准备"，又删了。
+最后发了一个"👍"。
+
+——4 个月前，你还在和他比 GPA。
+3.88 vs 3.92，你赢过他一次。
+
+现在他赢了你一辈子。`,
     choices: [
-      { label: "A", text: '"二姑，考试不一样，我再努力。"',
+      { label: "A", text: '"恭喜恭喜！"（发完默默关掉群聊）',
         effects: { mood: -8, relation: 3 },
         achievement: "强颜欢笑" },
-      { label: "B", text: '"表妹那个是事业编，我这个是公务员。"',
-        effects: { mood: -3, relation: -5 },
-        achievement: "真相帝" },
-      { label: "C", text: '"二姑，我先挂了，要去自习了。"',
-        effects: { mood: -5, study: 3 },
-        achievement: "逃避可耻但有用" }
+      { label: "B", text: '"考公稳定，你们 35 岁就失业。"',
+        effects: { mood: 3, relation: -5, sanity: -3 },
+        achievement: "自我说服" },
+      { label: "C", text: '退群——"我需要安静"',
+        effects: { mood: 5, relation: -10, study: 5 },
+        achievement: "及时止损" }
     ]
   },
 
   {
     id: "985_classmate",
-    title: "同学群有人晒offer",
+    title: "毕业典礼的合影",
     rarity: "rare",
     rarityWeight: 1.0,
     cond: (p) => p.identity === "985" && p.month >= 6,
-    desc: `大学同学群，22:47。
+    desc: `你刷朋友圈，刷到一张照片。
 
-室友老王发了一条：
-<em>"兄弟们，上岸了！字节 SP offer，总包 60，base 北京。"</em>
+毕业典礼那天的大合影。
+你站在第三排左数第五个。
 
-紧接着是 11 条"卧槽牛逼"。
+照片下面有人评论：
+<em>"卧槽，这张照片里现在已经有 4 个考上公务员了！"</em>
 
-然后另一个室友：
-<em>"我也上岸了，美团，45 包。"</em>
+你数了数——
+站在前排的老李，省厅选调。
+你后排的学姐，市直机关。
+照片右边的小张，珠三角乡镇。
 
-你看了眼自己的桌面——
-《行测 5000 题》做到第 1247 题，
-正确率 58%。
+你笑了笑，把手机放下。
 
-老王 @了你：<em>"XX 呢？你之前不是说也在准备考试？"</em>
+——你呢？
+你在照片里笑得最灿烂。
+你当时觉得自己什么都能做。
+现在你觉得什么都做不了。
 
-你打了三个字"在准备"，又删了。
-最后发了一个"👍"。`,
+那张照片里 28 个人，
+有人去了字节，有人去了中金，
+有人去了四大，有人去了选调。
+而你——
+你在背《行测 5000 题》第 1247 题，
+正确率 58%。`,
     choices: [
-      { label: "A", text: '"恭喜恭喜！"（发完默默关掉群聊）',
-        effects: { mood: -15, study: 5 },
-        achievement: "强颜欢笑" },
-      { label: "B", text: '"我考公，跟你们赛道不一样。"',
-        effects: { mood: -5, relation: -3 },
-        achievement: "赛道不同" },
-      { label: "C", text: "退出群聊",
-        effects: { mood: 5, relation: -10, study: 8 },
-        achievement: "及时止损" }
+      { label: "A", text: '"我也考上了，只是晚一点。"（继续刷题）',
+        effects: { mood: -8, study: 8 },
+        achievement: "我也会的" },
+      { label: "B", text: '把照片存下来——"提醒自己别掉队"',
+        effects: { mood: -3, study: 12, sanity: -5 },
+        achievement: "沉没成本" },
+      { label: "C", text: '删掉朋友圈入口，眼不见为净',
+        effects: { mood: 3, sanity: 5, study: 3 },
+        achievement: "屏蔽" }
     ]
   },
 
@@ -2576,6 +2592,9 @@ const ACHIEVEMENTS = {
   "长者的尊严": { desc: '"不用了，我有自己的方法。"' },
   "以老卖小": { desc: '"兄弟，加个微信。"' },
   "我还能行": { desc: '"我还年轻，还能拼。"' },
+  "我也会的": { desc: '"我也考上了，只是晚一点。"——985 应届的最后一口气。' },
+  "沉没成本": { desc: "把毕业照存下来，提醒自己别掉队。" },
+  "屏蔽": { desc: "删掉朋友圈入口，眼不见为净。" },
   "擦干眼泪": { desc: '"先把脸洗了，继续。"' },
   "真话伤人": { desc: '"表姐有婆婆帮忙带孩子，我没有。"' },
   "冷处理": { desc: "不回复，继续做题。" },
