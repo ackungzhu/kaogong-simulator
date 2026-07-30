@@ -1,5 +1,6 @@
 /**
- * 《上岸模拟器》 v0.5 · 核心逻辑
+ * 《上岸模拟器》 v0.6 · 核心逻辑
+ * v0.6: 续读功能 + 事件频率+权重修复 + 模态关闭手势 + 成就bug修复
  * v0.5: 存档系统 + 模态遮罩 + 执行脉冲 + UI局部更新 + 事件稀有度引擎
  */
 
@@ -98,8 +99,10 @@ const SaveSystem = {
     };
     try {
       localStorage.setItem(this.KEY, JSON.stringify(data));
-      const meta = JSON.parse(localStorage.getItem(this.metaKey) || '{"playCount":0,"totalTime":0,"bestEndings":[]}');
-      meta.playCount = (meta.playCount || 0);
+      // P0 修复: 维护 meta 统计（playCount 累加, totalTime 累计, bestEndings 在 endGame 写入）
+      const meta = this.loadMeta();
+      meta.totalTime = (meta.totalTime || 0) + (Date.now() - (meta._sessionStart || Date.now()));
+      meta._sessionStart = Date.now();
       localStorage.setItem(this.metaKey, JSON.stringify(meta));
     } catch(e) { /* quota exceeded, silent fail */ }
   },
@@ -114,6 +117,13 @@ const SaveSystem = {
   },
   hasSave() { return !!localStorage.getItem(this.KEY); },
   deleteSave() { localStorage.removeItem(this.KEY); },
+  // P0 修复: 增量更新 meta
+  bumpPlayCount() {
+    const meta = this.loadMeta();
+    meta.playCount = (meta.playCount || 0) + 1;
+    meta._sessionStart = Date.now();
+    this.saveMeta(meta);
+  },
   loadMeta() {
     try { return JSON.parse(localStorage.getItem(this.metaKey)) || {playCount:0,totalTime:0,bestEndings:[]}; }
     catch(e) { return {playCount:0,totalTime:0,bestEndings:[]}; }
@@ -126,12 +136,28 @@ const SaveSystem = {
 // ========== UI抽象层 (P0) ==========
 const UI = {
   _statsCache: {},
-  showModal(html, closeable = true) {
+  showModal(html, opts = {}) {
+    const { closeable = false, onClose } = opts;
     const overlay = $("modalOverlay");
     if (!overlay) return;
-    overlay.innerHTML = `<div class="modal-content">${html}${closeable ? '' : ''}</div>`;
+    const closeBtn = closeable ? `<button class="modal-close" aria-label="关闭">×</button>` : '';
+    overlay.innerHTML = `<div class="modal-content">${closeBtn}${html}</div>`;
     overlay.classList.add("active");
     document.body.style.overflow = "hidden";
+
+    if (closeable) {
+      const close = () => { this.hideModal(); if (typeof onClose === 'function') onClose(); };
+      const cb = overlay.querySelector('.modal-close');
+      if (cb) cb.addEventListener('click', close);
+      const onOverlayClick = (e) => {
+        if (e.target === overlay) { close(); overlay.removeEventListener('click', onOverlayClick); }
+      };
+      overlay.addEventListener('click', onOverlayClick);
+      const onEsc = (e) => {
+        if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
+      };
+      document.addEventListener('keydown', onEsc);
+    }
   },
   hideModal() {
     const overlay = $("modalOverlay");
@@ -188,7 +214,65 @@ const Game = {
     this.renderIdentities();
     this.renderLifeTags();
     this.renderMonths();
+    // P0: 检查存档显示"继续游戏"按钮
+    this.renderContinueButton();
     showScreen("screen-start");
+  },
+
+  renderContinueButton() {
+    // 清理旧按钮
+    const old = $("continueBtn");
+    if (old) old.remove();
+    if (!SaveSystem.hasSave()) return;
+    const meta = SaveSystem.loadMeta();
+    const data = SaveSystem.load();
+    const p = data ? data.player : null;
+    const dayInfo = p ? `${p.month}月${p.day}日` : "上次的进度";
+    const btn = document.createElement("button");
+    btn.id = "continueBtn";
+    btn.className = "btn-secondary";
+    btn.style.cssText = "margin-top:8px;background:var(--accent);color:white;border-color:var(--ink);";
+    btn.innerHTML = `📂 继续游戏 · ${dayInfo}（已玩 ${meta.playCount || 0} 次）`;
+    btn.onclick = () => Game.continueGame();
+    const startScreen = document.querySelector("#screen-start .container");
+    if (startScreen) {
+      // 插在"开始备考"按钮之前
+      const startBtn = startScreen.querySelector(".btn-main");
+      if (startBtn) startScreen.insertBefore(btn, startBtn);
+      else startScreen.appendChild(btn);
+    }
+  },
+
+  continueGame() {
+    const data = SaveSystem.load();
+    if (!data) { toast("暂无存档"); return; }
+    const p = data.player;
+    Player.identity = p.identity;
+    Player.startMonth = p.startMonth;
+    Player.year = p.year; Player.month = p.month; Player.day = p.day;
+    Player.hour = p.hour; Player.daysPlayed = p.daysPlayed; Player.totalDays = p.totalDays;
+    Player.ap = p.ap; Player.apMax = p.apMax;
+    Player.sleepStart = p.sleepStart; Player.sleepHours = p.sleepHours;
+    Player.consecutiveEarly = p.consecutiveEarly || 0;
+    Player.consecutiveLazy = p.consecutiveLazy || 0;
+    Player.stats = { ...p.stats };
+    Player.lifeTags = [...(p.lifeTags || [])];
+    Player.path = p.path;
+    Player.partners = [...(p.partners || [])];
+    Player.achievements = new Set(p.achievements || []);
+    Player.usedEvents = new Set(p.usedEvents || []);
+    Player.aiEventUsed = p.aiEventUsed || false;
+    Player.actionLog = [...(p.actionLog || [])];
+    Player.pendingWake = p.pendingWake || false;
+    Player.nightAlarm = p.nightAlarm;
+    Player._examScore = p._examScore || null;
+    Player._eventTriggeredToday = p._eventTriggeredToday || false;
+
+    toast(`📂 已续读 · ${Player.month}月${Player.day}日 第${Player.daysPlayed + 1}天`, "achievement", 2000);
+    showScreen("screen-game");
+    this.renderStatus();
+    this.renderActions();
+    if (Player.pendingWake) this.showWakeChoice();
   },
 
   showIdentity() { showScreen("screen-identity"); },
@@ -707,9 +791,11 @@ const Game = {
     this.renderPathPartners();
     this.renderActions();
 
-    // P0: 每日必触发事件（替代旧25%概率）
-    // 每进行2-3个行动后，高概率触发事件
-    if (Player.actionLog.length >= 2 && Math.random() < 0.8) {
+    // P0 修复: 每日1次强触发 + 行动间20%小概率额外事件
+    if (!Player._eventTriggeredToday && Player.actionLog.length >= 2) {
+      Player._eventTriggeredToday = true;
+      if (this.triggerRandomEvent()) return;
+    } else if (Player._eventTriggeredToday && Math.random() < 0.2) {
       if (this.triggerRandomEvent()) return;
     }
 
@@ -798,6 +884,7 @@ const Game = {
     Player.daysPlayed++;
     Player.day++;
     Player.ap = Player.apMax;
+    Player._eventTriggeredToday = false;  // P0 修复: 新一天重置事件触发标记
 
     if (Player.day > 30) {
       Player.day = 1;
@@ -944,8 +1031,8 @@ const Game = {
     };
   },
 
-  // 每日必定触发随机事件
-  triggerRandomEvent() {
+  // 每日必定触发随机事件 (P0 修复: 累积概率算法)
+  triggerRandomEvent(force = false) {
     const ctx = this.makeContext();
     // 筛选符合条件且未被使用过的事件
     const candidates = EVENTS.filter(e => {
@@ -956,17 +1043,12 @@ const Game = {
     });
     if (candidates.length === 0) return false;
 
-    // 按稀有度权重计算
-    const weighted = [];
-    candidates.forEach(e => {
-      const weight = e.rarityWeight || (e.weight || 1);
-      for (let i = 0; i < Math.ceil(weight * 10); i++) {
-        weighted.push(e);
-      }
-    });
-    if (weighted.length === 0) return false;
+    // 累积概率算法 (修复后的公平采样)
+    const total = candidates.reduce((s, e) => s + (e.rarityWeight || e.weight || 1), 0);
+    let r = Math.random() * total;
+    const event = candidates.find(e => (r -= (e.rarityWeight || e.weight || 1)) < 0);
+    if (!event) return false;
 
-    const event = randPick(weighted);
     Player.usedEvents.add(event.id);
     this.showEvent(event);
     return true;
@@ -1153,10 +1235,17 @@ const Game = {
     Player.aiEventUsed = false;
     Player._aiEvent = null;
     Player._examScore = null;
+    Player._eventTriggeredToday = false;
     Player.actionLog = [];
     Player.pendingWake = true;
     const log = $("logBox");
     if (log) log.innerHTML = "";
+    // P0: 清掉旧存档，新开一局不读旧档
+    SaveSystem.deleteSave();
+    // P0: 累加 playCount
+    SaveSystem.bumpPlayCount();
+    // 刷新开始页的"继续游戏"按钮
+    setTimeout(() => Game.renderContinueButton(), 100);
     showScreen("screen-start");
   },
 };
@@ -1248,7 +1337,7 @@ const Share = {
       ? "标签：" + Player.lifeTags.map(id => LIFE_TAGS.find(x => x.id === id)?.name).join("、") : "";
     const days = Player.daysPlayed;
     const months = Math.floor(days / 30);
-    return `《上岸模拟器 v0.5》#考公人档案
+    return `《上岸模拟器 v0.6》#考公人档案
 ━━━━━━━━━━━━━━━━━━━━
 🎭 结局：【${title}】 ${sub}
 📅 备考 ${days} 天（${months} 个月）
