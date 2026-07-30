@@ -1,6 +1,6 @@
 /**
- * 《上岸模拟器》 v0.4 · 核心逻辑
- * 时间系统 + 起床选择 + 睡眠规则
+ * 《上岸模拟器》 v0.5 · 核心逻辑
+ * v0.5: 存档系统 + 模态遮罩 + 执行脉冲 + UI局部更新 + 事件稀有度引擎
  */
 
 // ========== 玩家状态 ==========
@@ -63,6 +63,117 @@ function showScreen(id) {
   $(id).classList.add("active");
   window.scrollTo(0, 0);
 }
+function toast(msg, type = "normal", duration = 1800) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = type === "achievement" ? "show achievement" : "show";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), duration);
+}
+
+// ========== 存档系统 (P0) ==========
+const SaveSystem = {
+  KEY: "kaogong_save",
+  metaKey: "kaogong_meta",
+  autoSave(reason = "") {
+    const data = {
+      version: 1,
+      timestamp: Date.now(),
+      reason,
+      player: {
+        identity: Player.identity, startMonth: Player.startMonth,
+        year: Player.year, month: Player.month, day: Player.day,
+        hour: Player.hour, daysPlayed: Player.daysPlayed, totalDays: Player.totalDays,
+        ap: Player.ap, apMax: Player.apMax,
+        sleepStart: Player.sleepStart, sleepHours: Player.sleepHours,
+        consecutiveEarly: Player.consecutiveEarly, consecutiveLazy: Player.consecutiveLazy,
+        stats: { ...Player.stats },
+        lifeTags: [...Player.lifeTags], path: Player.path, partners: [...Player.partners],
+        achievements: [...Player.achievements],
+        usedEvents: [...Player.usedEvents], aiEventUsed: Player.aiEventUsed,
+        actionLog: [...Player.actionLog],
+        pendingWake: Player.pendingWake, nightAlarm: Player.nightAlarm,
+        _examScore: Player._examScore || null,
+      }
+    };
+    try {
+      localStorage.setItem(this.KEY, JSON.stringify(data));
+      const meta = JSON.parse(localStorage.getItem(this.metaKey) || '{"playCount":0,"totalTime":0,"bestEndings":[]}');
+      meta.playCount = (meta.playCount || 0);
+      localStorage.setItem(this.metaKey, JSON.stringify(meta));
+    } catch(e) { /* quota exceeded, silent fail */ }
+  },
+  load() {
+    try {
+      const raw = localStorage.getItem(this.KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (data.version !== 1) return null;
+      return data;
+    } catch(e) { return null; }
+  },
+  hasSave() { return !!localStorage.getItem(this.KEY); },
+  deleteSave() { localStorage.removeItem(this.KEY); },
+  loadMeta() {
+    try { return JSON.parse(localStorage.getItem(this.metaKey)) || {playCount:0,totalTime:0,bestEndings:[]}; }
+    catch(e) { return {playCount:0,totalTime:0,bestEndings:[]}; }
+  },
+  saveMeta(meta) {
+    try { localStorage.setItem(this.metaKey, JSON.stringify(meta)); } catch(e) {}
+  }
+};
+
+// ========== UI抽象层 (P0) ==========
+const UI = {
+  _statsCache: {},
+  showModal(html, closeable = true) {
+    const overlay = $("modalOverlay");
+    if (!overlay) return;
+    overlay.innerHTML = `<div class="modal-content">${html}${closeable ? '' : ''}</div>`;
+    overlay.classList.add("active");
+    document.body.style.overflow = "hidden";
+  },
+  hideModal() {
+    const overlay = $("modalOverlay");
+    if (!overlay) return;
+    overlay.classList.remove("active");
+    document.body.style.overflow = "";
+  },
+  // 局部更新状态栏数值（不重建DOM）
+  renderStatsDiff(changes) {
+    const keys = ["study","mood","money","relation","sanity"];
+    keys.forEach(k => {
+      const el = document.querySelector(`.stat-cell[data-key="${k}"] .stat-value`);
+      const bar = document.querySelector(`.stat-cell[data-key="${k}"] .stat-bar-fill`);
+      if (el) {
+        const val = Player.stats[k];
+        el.textContent = val;
+        const cell = el.closest(".stat-cell");
+        if (cell) {
+          cell.classList.remove("low","high");
+          if (val <= 25) cell.classList.add("low");
+          if (val >= 75) cell.classList.add("high");
+        }
+      }
+      if (bar) { bar.style.width = Player.stats[k] + "%"; }
+    });
+    // 更新体力点
+    const apDots = document.querySelectorAll(".ap-dot");
+    apDots.forEach((dot, i) => {
+      dot.classList.toggle("spent", i >= Player.ap);
+    });
+    // 更新日期时钟
+    const clock = document.querySelector(".date-clock");
+    if (clock) clock.textContent = `⏰ ${fmtHour(Player.hour)}`;
+  },
+  // 行动卡片执行脉冲
+  pulseCard(cardId) {
+    const card = document.querySelector(`.action-card[data-action="${cardId}"]`);
+    if (!card) return;
+    card.classList.add("just-executed");
+    setTimeout(() => card.classList.remove("just-executed"), 700);
+  }
+};
 function toast(msg, type = "normal", duration = 1800) {
   const t = $("toast");
   t.textContent = msg;
@@ -252,14 +363,12 @@ const Game = {
     grid.parentNode.insertBefore(bar, grid.nextSibling);
   },
 
-  // ========== 起床选择 ==========
+  // ========== 起床选择（模态版）==========
   showWakeChoice(firstDay = false) {
     Player.pendingWake = true;
     $("actionsSection").style.display = "none";
     $("eventBox").style.display = "none";
-    const wakeBox = $("wakeBox");
-    if (!wakeBox) return;
-    wakeBox.style.display = "block";
+    $("wakeBox").style.display = "none";
 
     // 计算昨夜睡眠
     let lastNightSleep = Player.sleepHours;
@@ -276,7 +385,6 @@ const Game = {
     }
 
     const opts = WAKE_OPTIONS.map(o => {
-      // 根据情况预测加成
       let extra = "";
       if (o.id === "early") {
         if (lastNightSleep < 6) {
@@ -295,11 +403,14 @@ const Game = {
       `;
     }).join("");
 
-    wakeBox.innerHTML = `
-      <div class="wake-title">🌅 ${Player.month}月${Player.day}日 · 起床时间</div>
-      ${sleepWarn}
-      <div class="wake-options">${opts}</div>
+    const html = `
+      <div class="wake-box">
+        <div class="wake-title">🌅 ${Player.month}月${Player.day}日 · 起床时间</div>
+        ${sleepWarn}
+        <div class="wake-options">${opts}</div>
+      </div>
     `;
+    UI.showModal(html, false);
   },
 
   pickWake(id) {
@@ -346,6 +457,8 @@ const Game = {
     }
     this.addLog(logMsg);
 
+    UI.hideModal();
+
     // 起床后允许"再赖床15分钟"（仅当选lazy或normal时给出选项）
     if ((id === "lazy" || id === "normal") && Math.random() < 0.6) {
       this.showLazyMore();
@@ -354,34 +467,36 @@ const Game = {
     }
   },
 
-  // 起床后追加"再睡15分钟"机制
+  // 起床后追加"再睡15分钟"机制（模态版）
   showLazyMore() {
-    $("wakeBox").innerHTML = `
-      <div class="wake-title">⏰ 闹钟再次响起</div>
-      <div class="lazy-prompt">
-        你伸手按掉了闹钟。<br>
-        <em>再睡15分钟？</em>
-      </div>
-      <div class="wake-options">
-        <div class="wake-card" onclick="Game.lazyMore(true)">
-          <div class="wake-time">🛏️ 再赖15分钟</div>
-          <div class="wake-desc">"就15分钟，真的"</div>
-          <div class="wake-hint">精神+1，但连续2次会昏睡到11:00</div>
+    const html = `
+      <div class="wake-box">
+        <div class="wake-title">⏰ 闹钟再次响起</div>
+        <div class="lazy-prompt">
+          你伸手按掉了闹钟。<br>
+          <em>再睡15分钟？</em>
         </div>
-        <div class="wake-card" onclick="Game.lazyMore(false)">
-          <div class="wake-time">💪 立刻起床</div>
-          <div class="wake-desc">真男人/女人不赖床</div>
-          <div class="wake-hint">心态+2，重置连续赖床计数</div>
+        <div class="wake-options">
+          <div class="wake-card" onclick="Game.lazyMore(true)">
+            <div class="wake-time">🛏️ 再赖15分钟</div>
+            <div class="wake-desc">"就15分钟，真的"</div>
+            <div class="wake-hint">精神+1，但连续2次会昏睡到11:00</div>
+          </div>
+          <div class="wake-card" onclick="Game.lazyMore(false)">
+            <div class="wake-time">💪 立刻起床</div>
+            <div class="wake-desc">真男人/女人不赖床</div>
+            <div class="wake-hint">心态+2，重置连续赖床计数</div>
+          </div>
         </div>
       </div>
     `;
+    UI.showModal(html, false);
   },
 
   lazyMore(yes) {
     if (yes) {
       Player.consecutiveLazy++;
       if (Player.consecutiveLazy >= 2) {
-        // 昏睡到 11:00
         Player.hour = 11;
         Player.consecutiveLazy = 0;
         this.applyEffects({ sanity: 12, mood: 5, study: -5 });
@@ -398,10 +513,12 @@ const Game = {
       this.applyEffects({ mood: 2 });
       this.addLog("💪 一鼓作气起床 — 心态+2");
     }
+    UI.hideModal();
     this.startDayActions();
   },
 
   startDayActions() {
+    UI.hideModal();
     $("wakeBox").style.display = "none";
     $("actionsSection").style.display = "block";
     this.renderStatus();
@@ -470,11 +587,12 @@ const Game = {
       { k: "relation", icon: "🤝", label: "关系" },
       { k: "sanity", icon: "🧠", label: "精神" },
     ];
+    // P0: 添加 data-key 属性支持局部更新
     $("statsGrid").innerHTML = keys.map(({ k, icon, label }) => {
       const val = Player.stats[k];
       const cls = val <= 25 ? "low" : (val >= 75 ? "high" : "");
       return `
-        <div class="stat-cell ${cls}">
+        <div class="stat-cell ${cls}" data-key="${k}">
           <div class="stat-label">${icon} ${label}</div>
           <div class="stat-value">${val}</div>
           <div class="stat-bar"><div class="stat-bar-fill" style="width:${val}%"></div></div>
@@ -513,7 +631,7 @@ const Game = {
       const apOk = Player.ap >= a.cost;
       const dur = Array.isArray(a.duration) ? `${a.duration[0]}-${a.duration[1]}h` : `${a.duration}h`;
       const endHour = Player.hour + (Array.isArray(a.duration) ? a.duration[1] : a.duration);
-      const timeOk = endHour <= 23.5;        // 不能超出今日
+      const timeOk = endHour <= 23.5;
       const disabled = !apOk || !timeOk;
       const reason = !apOk ? "体力不足" : (!timeOk ? "时间不够" : "");
       const costDots = "⚡".repeat(a.cost);
@@ -522,7 +640,7 @@ const Game = {
         return `${icon}${v > 0 ? "+" : ""}${v}`;
       }).join(" ");
       return `
-        <div class="action-card ${disabled ? "disabled" : ""}" 
+        <div class="action-card ${disabled ? "disabled" : ""}" data-action="${a.id}"
              onclick="${disabled ? `Game.hintBlock('${reason}')` : `Game.doAction('${a.id}')`}">
           <div class="action-top">
             <span class="action-icon">${a.icon}</span>
@@ -559,6 +677,9 @@ const Game = {
     if (!act) return;
     if (Player.ap < act.cost) return;
 
+    // P0: 执行脉冲视觉反馈
+    UI.pulseCard(actionId);
+
     // 实际时长（可能为随机区间）
     let duration = act.duration;
     if (Array.isArray(duration)) {
@@ -570,35 +691,43 @@ const Game = {
     Player.hour += duration;
 
     // 数值
-    this.applyEffects(act.effects);
+    const changes = this.applyEffects(act.effects);
 
     const flavor = randPick(act.flavor);
     this.addLog(`${act.icon} <b>${act.name}</b>（${duration}h） — ${flavor}`);
     Player.actionLog.push(act.id);
 
-    if (this.checkBreakdown()) return;
-
-    // 自动判定：超过22:30，强制询问是否睡觉
-    if (Player.hour >= 22.5) {
-      this.renderStatus();
-      setTimeout(() => this.endDay(), 600);
+    if (this.checkBreakdown()) {
+      SaveSystem.autoSave("崩溃结局");
       return;
     }
 
-    this.renderStatus();
+    // P0: UI局部更新（只更新数值，不重建DOM）
+    UI.renderStatsDiff(changes);
+    this.renderPathPartners();
     this.renderActions();
+
+    // P0: 每日必触发事件（替代旧25%概率）
+    // 每进行2-3个行动后，高概率触发事件
+    if (Player.actionLog.length >= 2 && Math.random() < 0.8) {
+      if (this.triggerRandomEvent()) return;
+    }
+
+    // 自动判定：超过22:30，强制询问是否睡觉
+    if (Player.hour >= 22.5) {
+      setTimeout(() => this.endDay(), 600);
+      return;
+    }
   },
 
   // ========== 结束今日（睡觉）==========
-  async endDay() {
-    // 弹出闹钟设置
+  endDay() {
     this.showSleepDialog();
   },
 
   showSleepDialog() {
     $("actionsSection").style.display = "none";
-    const wakeBox = $("wakeBox");
-    wakeBox.style.display = "block";
+    $("wakeBox").style.display = "none";
 
     const now = Player.hour;
     let nightTone = "";
@@ -607,26 +736,29 @@ const Game = {
     else if (now < 26) nightTone = "已经凌晨了，硬撑要付出代价。";
     else nightTone = "通宵选手警告。";
 
-    wakeBox.innerHTML = `
-      <div class="wake-title">🌙 设置闹钟</div>
-      <div class="sleep-info">现在是 <em>${fmtHour(now > 24 ? now - 24 : now)}</em>${now > 24 ? "（次日）" : ""}<br>${nightTone}</div>
-      <div class="wake-options">
-        ${[6, 7, 8, 9, 10].map(h => {
-          const sleep = (24 + h) - now;
-          const sleepFinal = sleep > 24 ? sleep - 24 : sleep;
-          const tag = sleepFinal < 6 ? "<span class='wake-warn'>睡不够</span>" :
-                      sleepFinal > 9 ? "<span class='wake-bonus'>充足</span>" :
-                      "<span class='wake-bonus'>正常</span>";
-          return `
-            <div class="wake-card" onclick="Game.confirmSleep(${h})">
-              <div class="wake-time">⏰ ${h}:00 起</div>
-              <div class="wake-desc">睡 ${sleepFinal.toFixed(1)} 小时</div>
-              <div class="wake-hint">${tag}</div>
-            </div>
-          `;
-        }).join("")}
+    const html = `
+      <div class="wake-box">
+        <div class="wake-title">🌙 设置闹钟</div>
+        <div class="sleep-info">现在是 <em>${fmtHour(now > 24 ? now - 24 : now)}</em>${now > 24 ? "（次日）" : ""}<br>${nightTone}</div>
+        <div class="wake-options">
+          ${[6, 7, 8, 9, 10].map(h => {
+            const sleep = (24 + h) - now;
+            const sleepFinal = sleep > 24 ? sleep - 24 : sleep;
+            const tag = sleepFinal < 6 ? "<span class='wake-warn'>睡不够</span>" :
+                        sleepFinal > 9 ? "<span class='wake-bonus'>充足</span>" :
+                        "<span class='wake-bonus'>正常</span>";
+            return `
+              <div class="wake-card" onclick="Game.confirmSleep(${h})">
+                <div class="wake-time">⏰ ${h}:00 起</div>
+                <div class="wake-desc">睡 ${sleepFinal.toFixed(1)} 小时</div>
+                <div class="wake-hint">${tag}</div>
+              </div>
+            `;
+          }).join("")}
+        </div>
       </div>
     `;
+    UI.showModal(html, false);
   },
 
   confirmSleep(wakeHour) {
@@ -640,6 +772,9 @@ const Game = {
     Player.nightAlarm = wakeHour;
 
     this.addLog(`🌙 <b>${fmtHour(now > 24 ? now - 24 : now)} 入睡</b>，闹钟设在 ${wakeHour}:00（计划睡 ${finalSleep.toFixed(1)} 小时）`);
+
+    UI.hideModal();
+    SaveSystem.autoSave("每日结束");
 
     // 进入下一天
     this.dailySummary();
@@ -673,6 +808,7 @@ const Game = {
 
     const mile = MILESTONES.find(m => m.month === Player.month && m.day === Player.day);
     if (mile) {
+      SaveSystem.autoSave("里程碑: " + mile.name);
       this.triggerMilestone(mile);
       return;
     }
@@ -796,8 +932,7 @@ const Game = {
     `;
   },
 
-  // ========== 随机事件（仅在玩家手动触发 endDay 之外的某些时刻）==========
-  // 简化：行动完成有概率触发，已在 doAction 中预留接口
+  // ========== 随机事件（v0.5新引擎：必定触发+稀有度权重）==========
   makeContext() {
     return {
       ...Player.stats,
@@ -807,6 +942,97 @@ const Game = {
       identity: Player.identity, path: Player.path,
       partners: Player.partners, lifeTags: Player.lifeTags,
     };
+  },
+
+  // 每日必定触发随机事件
+  triggerRandomEvent() {
+    const ctx = this.makeContext();
+    // 筛选符合条件且未被使用过的事件
+    const candidates = EVENTS.filter(e => {
+      if (e.id === "ai_placeholder") return false;
+      if (Player.usedEvents.has(e.id)) return false;
+      if (e.cond && !e.cond(ctx)) return false;
+      return true;
+    });
+    if (candidates.length === 0) return false;
+
+    // 按稀有度权重计算
+    const weighted = [];
+    candidates.forEach(e => {
+      const weight = e.rarityWeight || (e.weight || 1);
+      for (let i = 0; i < Math.ceil(weight * 10); i++) {
+        weighted.push(e);
+      }
+    });
+    if (weighted.length === 0) return false;
+
+    const event = randPick(weighted);
+    Player.usedEvents.add(event.id);
+    this.showEvent(event);
+    return true;
+  },
+
+  showEvent(event) {
+    $("actionsSection").style.display = "none";
+    $("eventBox").style.display = "block";
+    $("wakeBox").style.display = "none";
+
+    const rarityLabel = event.rarity === "legendary" ? "🟡传说" :
+                        event.rarity === "epic" ? "🟣史诗" :
+                        event.rarity === "rare" ? "🔵稀有" : "";
+
+    $("eventTitle").innerHTML = `${rarityLabel ? rarityLabel + " · " : ""}${event.title}`;
+    $("eventDesc").innerHTML = event.desc;
+    $("eventChoices").innerHTML = event.choices.map((ch, i) => {
+      const label = ch.label || String.fromCharCode(65 + i);
+      return `
+        <button class="choice-btn" onclick="Game.resolveEvent('${event.id}', ${i})">
+          <span class="choice-label">${label}</span>
+          <span>${ch.text}</span>
+        </button>
+      `;
+    }).join("");
+    SaveSystem.autoSave("事件: " + event.title);
+  },
+
+  resolveEvent(eventId, choiceIdx) {
+    const event = EVENTS.find(e => e.id === eventId);
+    if (!event) return;
+    const choice = event.choices[choiceIdx];
+    if (!choice) return;
+
+    // 应用效果
+    if (choice.effects) {
+      this.applyEffects(choice.effects);
+    }
+
+    // 设置路线
+    if (choice.setPath) {
+      Player.path = choice.setPath;
+    }
+
+    // 添加搭子
+    if (choice.addPartner) {
+      if (!Player.partners.includes(choice.addPartner) && Player.partners.length < 2) {
+        Player.partners.push(choice.addPartner);
+      }
+    }
+
+    // 解锁成就
+    if (choice.achievement) {
+      Player.achievements.add(choice.achievement);
+      toast(`🏅 ${choice.achievement}`, "achievement");
+    }
+
+    // 事件链标记
+    if (choice.tagEvent) {
+      Player._eventTags = Player._eventTags || [];
+      Player._eventTags.push(choice.tagEvent);
+    }
+
+    $("eventBox").style.display = "none";
+    SaveSystem.autoSave("事件解决: " + event.title);
+    this.startDayActions();
   },
 
   // ========== 崩溃 ==========
@@ -826,6 +1052,16 @@ const Game = {
     if (!ending) ending = DEFAULT_ENDING;
 
     (ending.autoAchievements || []).forEach(a => Player.achievements.add(a));
+
+    // 记录结局到meta
+    const meta = SaveSystem.loadMeta();
+    meta.bestEndings = meta.bestEndings || [];
+    if (!meta.bestEndings.find(e => e.id === ending.id)) {
+      meta.bestEndings.push({ id: ending.id, title: ending.title, date: new Date().toISOString() });
+      meta.bestEndings = meta.bestEndings.slice(-10);
+    }
+    SaveSystem.saveMeta(meta);
+    SaveSystem.deleteSave();
 
     if (ending.id === "shangan_fengdian") {
       this.playFanjinCutscene(() => this.renderEnding(ending));
@@ -945,7 +1181,7 @@ const Share = {
     const sub = $("endingSub").textContent;
     const tagInfo = Player.lifeTags.length
       ? "标签：" + Player.lifeTags.map(id => LIFE_TAGS.find(x => x.id === id)?.name).join("、") : "";
-    const text = `《上岸模拟器 v0.4》
+    const text = `《上岸模拟器 v0.5》
 结局：【${title}】 ${sub}
 
 ${tagInfo}

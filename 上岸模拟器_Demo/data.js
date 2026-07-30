@@ -1,7 +1,8 @@
 /**
- * 《上岸模拟器》 v0.4
- * 新增：人生标签 + 24h时间制 + 起床/赖床/熬夜系统
- */
+* 《上岸模拟器》 v0.5
+* 新增：事件稀有度引擎 + 8个高传播力事件 + 范进体系彩蛋
+* v0.4基线：人生标签 + 24h时间制 + 起床/赖床/熬夜系统
+*/
 
 // ========== 人生标签库（开局多选）==========
 // 每个标签影响初始数值、触发偏好、特殊事件解锁
@@ -1074,11 +1075,252 @@ D. 她在暗示我多吃饭对学习好
   {
     id: "ai_placeholder",
     title: "[AI 生成事件]",
-    weight: 0.01, // 极低权重，避免随机抽到
+    weight: 0.01,
     cond: (p) => false,
     desc: `（等待 AI 生成）`,
     choices: [
       { label: "A", text: "...", effects: {} }
+    ]
+  },
+
+  // ============ v0.5 新增事件：稀有度分级引擎 ============
+  // 稀有度: common(普通) | rare(稀有) | epic(史诗) | legendary(传说)
+  // rarityWeight: 0.1-10，数值越大越常见
+
+  // ---- 传说级（极稀有+高传播） ----
+  {
+    id: "fanfan_lottery",
+    title: "范进附体·彩票时刻",
+    rarity: "legendary",
+    rarityWeight: 0.1,
+    cond: (p) => p.monthsPlayed >= 3 && Math.random() < 0.1,
+    desc: `你在 B 站刷到一个 2024 年的视频：
+<em>"那个考公7年的男人，35岁终于上岸了。"</em>
+
+视频里他站在政务大厅门口，举着录取通知书，
+笑得像个孩子。
+
+<em>——你突然想哭。</em>
+
+不是因为你嫉妒他。
+而是因为他替你活了一遍你不敢想的人生。`,
+    choices: [
+      { label: "A", text: '"去他妈的，再考一年"（咬牙加课）',
+        effects: { study: 15, mood: -5, sanity: -10, money: -5 },
+        achievement: "范进附体", tagEvent: "fanfan_awaken" },
+      { label: "B", text: "转发给爸妈，配文：'我也会的'",
+        effects: { mood: 10, relation: 8, sanity: 5 },
+        tagEvent: "fanfan_awaken" },
+      { label: "C", text: "默默关掉视频，关掉手机，关灯睡觉",
+        effects: { sanity: 15, mood: -3 },
+        achievement: "想开了" },
+    ]
+  },
+
+  {
+    id: "ghost_interview",
+    title: "面试当天的灵异事件",
+    rarity: "legendary",
+    rarityWeight: 0.15,
+    cond: (p) => p.monthsPlayed >= 5,
+    desc: `你是今天第 17 号考生。
+
+上一位考生出来时脸色惨白，
+对你说了一句莫名其妙的话：
+<em>"第 17 号……别被自己的影子吓到。"</em>
+
+你推门进去——
+
+主考官一共有 7 个。
+但你数了 8 把椅子。
+多出来那把椅子上，
+坐着一个你认识的人——
+<em>是你昨晚梦里的自己。</em>
+
+他对你点了点头。`,
+    choices: [
+      { label: "A", text: '"谢谢前辈指点"（淡定作答）',
+        effects: { mood: 5, sanity: -8, study: 8 },
+        achievement: "我不怕" },
+      { label: "B", text: "假装没看见，按部就班答完",
+        effects: { sanity: 3, study: 5 } },
+      { label: "C", text: '"老师，您的椅子好像没摆正"（阴阳怪气）',
+        effects: { mood: 20, sanity: 5, relation: -5 },
+        achievement: "阴阳大师" },
+    ]
+  },
+
+  // ---- 史诗级（稀有+情绪浓烈） ----
+  {
+    id: "father_message",
+    title: "爸的消息",
+    rarity: "epic",
+    rarityWeight: 0.3,
+    cond: (p) => p.monthsPlayed >= 2 && p.relation < 70,
+    desc: `凌晨 1 点 23 分。
+你已经刷了 4 套行测，眼睛快瞎了。
+
+手机震了一下。
+
+是你爸。
+一年没主动发过消息的那种。
+
+<em>"睡了没？爸今天去县医院体检，心脏有点小问题。
+没事，就跟你说一声。"</em>
+
+你想起上次见面还是过年。
+他站在门口的样子，你都快记不清了。`,
+    choices: [
+      { label: "A", text: '立刻打电话回去——"我现在就买票"',
+        effects: { money: -25, mood: 15, relation: 25, study: -10 },
+        achievement: "你不是一个人在考公" },
+      { label: "B", text: '"爸，我这几天在冲刺国考，等考完我回去"',
+        effects: { mood: -8, relation: -5, study: 5 } },
+      { label: "C", text: "不回消息。明天 4 点半起床，模考在 5 点。",
+        effects: { study: 10, mood: -15, relation: -15, sanity: -5 },
+        achievement: "假考生" },
+    ]
+  },
+
+  {
+    id: "expired_signing",
+    title: "协议班退费现场",
+    rarity: "epic",
+    rarityWeight: 0.4,
+    cond: (p) => p.money < 50 && p.monthsPlayed >= 3,
+    desc: `机构退费群炸了。
+
+"@所有人 退费请于本周五前携带原始合同、身份证、缴费凭证，
+到 XX 路 XX 楼 XX 室办理。"
+
+但群里同时流传着另一张截图：
+<em>"该机构已被列入经营异常名录，法定代表人限制高消费。"</em>
+
+你算了一下：
+协议费 19800，上岸才退。3 年了。
+银行卡里还剩 47 块。`,
+    choices: [
+      { label: "A", text: "去现场！必须当面要说法！",
+        effects: { sanity: -10, relation: 5, money: 10, mood: -5 },
+        achievement: "大冤种" },
+      { label: "B", text: "和群里 200 个人一起走集体诉讼",
+        effects: { money: 5, sanity: 5, relation: 15, study: -5 } },
+      { label: "C", text: '"算了，就当交了一笔研学费"（关掉手机）',
+        effects: { mood: -5, sanity: 8 },
+        achievement: "想开了" },
+    ]
+  },
+
+  // ---- 稀有级（少见+塑造性格） ----
+  {
+    id: "taoli_jianghu",
+    title: "桃李江湖",
+    rarity: "rare",
+    rarityWeight: 0.7,
+    cond: (p) => p.monthsPlayed >= 4 && p.relation > 30,
+    desc: `你同学考上 3 年了。
+昨天他朋友圈发了条新动态：
+<em>"今天组织召开第 36 次业务推进会……"</em>
+
+你看了看自己桌上堆着的
+3 套没刷完的真题、5 罐红牛、2 包榨菜。
+
+他请你吃饭，席间：
+<em>"兄弟，要不要我帮你问问我们单位还有没有合同工的坑？"</em>
+
+你笑了一下，说不用了。
+但回家的地铁上，你想了 40 分钟。`,
+    choices: [
+      { label: "A", text: '"好啊，能先内推吗？"（曲线救国）',
+        effects: { money: 10, mood: 5, study: -5, relation: 5 },
+        tagEvent: "internal_refer" },
+      { label: "B", text: "婉拒，回家把模考卷做完",
+        effects: { study: 8, mood: -3, sanity: 5 },
+        achievement: "我卷故我在" },
+      { label: "C", text: '"你们单位食堂一顿饭多少钱？真羡慕"（苦笑）',
+        effects: { mood: -5, sanity: 5, relation: 3 } },
+    ]
+  },
+
+  {
+    id: "rural_grandma",
+    title: "外婆的菜园",
+    rarity: "rare",
+    rarityWeight: 0.5,
+    cond: (p) => p.month >= 5 && p.month <= 7,
+    desc: `外婆打电话让你回家吃饭。
+
+你说在备考。
+她说：<em>"考什么公，出来吃西瓜，今年瓜甜。"</em>
+
+你说：<em>"外婆，我真的要考。"</em>
+
+她在电话那头沉默了很久：
+<em>"那你别熬夜。熬夜的孩子，外婆看着心疼。"</em>
+
+你挂了电话。
+桌上那本《行测5000题》突然变得不那么重要了。`,
+    choices: [
+      { label: "A", text: "回家吃西瓜（休息一天）",
+        effects: { mood: 20, sanity: 15, study: -8, relation: 10 },
+        achievement: "你不是一个人在考公" },
+      { label: "B", text: "电话里说：'外婆，考上公我第一个回家'",
+        effects: { study: 5, mood: 8, sanity: 5 } },
+      { label: "C", text: "不回家。把今天的卷子做完再说",
+        effects: { study: 10, mood: -5, relation: -5, sanity: -8 } },
+    ]
+  },
+
+  // ---- 普通级（常见+日常感） ----
+  {
+    id: "jier_saler",
+    title: "节日促销诱惑",
+    rarity: "common",
+    rarityWeight: 2.5,
+    cond: (p) => p.money < 60 && p.monthsPlayed >= 1,
+    desc: `双 11 / 618 / 考公图书节……
+你打开抖音，"全场 5 折"、"冲刺卷买一送一"的红点疯狂闪烁。
+
+购物车里躺着：
+- 粉笔行测 5000 题（已加购 17 天）
+- 中公冲刺密卷（已加购 17 天）
+- 一包咖啡（已加购 17 天）
+
+你默默清空购物车。
+你点进"考公人互助群"：
+<em>"兄弟们，借一套用用，二手的就行。"</em>`,
+    choices: [
+      { label: "A", text: "咬牙下单（花 88 块，复习 +5）",
+        effects: { money: -10, study: 5, mood: 5 } },
+      { label: "B", text: "去拼多多买盗版（穷人智慧）",
+        effects: { money: -3, study: 3, mood: 2, sanity: -2 } },
+      { label: "C", text: "找考友借（真·考公搭子）",
+        effects: { relation: 8, study: 2, mood: 3 } },
+    ]
+  },
+
+  {
+    id: "sister_mock",
+    title: "表妹的模考邀请",
+    rarity: "common",
+    rarityWeight: 1.8,
+    cond: (p) => p.study > 30 && p.monthsPlayed >= 2,
+    desc: `你表妹今年大三，也要考公。
+她给你发了个链接：
+<em>"哥，我组了个线上模考局，要不要一起？"</em>
+
+你点开她成绩单：
+行测 71，申论 68。
+
+你看了看你上次的模考：
+行测 52，申论 49。`,
+    choices: [
+      { label: "A", text: "去！被表妹超了多没面子",
+        effects: { study: 8, mood: -3, sanity: -3 } },
+      { label: "B", text: "婉拒——'我准备自己刷题'",
+        effects: { mood: 3, sanity: 2 } },
+      { label: "C", text: "反向加课——'妹，你把学习计划发我参考下'",
+        effects: { study: 5, relation: 5, mood: 2 } },
     ]
   },
 ];
