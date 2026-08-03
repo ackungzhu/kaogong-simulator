@@ -9,6 +9,7 @@
 // ========== 玩家状态 ==========
 const Player = {
   identity: null,
+  province: null,  // v0.8 地区菜单
   startMonth: 3,
   // 时间系统
   year: 2026,
@@ -277,6 +278,11 @@ const Game = {
     Player.moneyMonthlyPenalty = p.moneyMonthlyPenalty || 0;
     Player.moneyPenaltyMonths = p.moneyPenaltyMonths || 0;
     Player.lastIdentityEventDay = p.lastIdentityEventDay || 0;
+    // v0.8: 恢复地区菜单状态
+    Player.province = p.province || null;
+    Player.lastProvinceEventDay = p.lastProvinceEventDay || 0;
+    // v0.8: 恢复嘲讽NPC记录
+    Player._mockeryNPCs = p._mockeryNPCs || [];
 
     toast(`📂 已续读 · ${Player.month}月${Player.day}日 第${Player.daysPlayed + 1}天`, "achievement", 2000);
     showScreen("screen-game");
@@ -339,6 +345,54 @@ const Game = {
     }
     Player.ap = Player.apMax;
     this._selectedIdentity = null;
+    // v0.8: 身份选完后跳地区选择
+    showScreen("screen-province");
+    this.renderProvinces();
+  },
+
+  // v0.8: 地区菜单
+  _selectedProvince: null,
+  renderProvinces() {
+    const grid = $("provinceGrid");
+    if (!grid) return;
+    grid.innerHTML = PROVINCES.map(p => {
+      const fx = Object.entries(p.init).map(([k, v]) => {
+        const icon = { study: "📚", mood: "❤️", money: "💰", relation: "🤝", sanity: "🧠" }[k];
+        return `${icon}${v > 0 ? "+" : ""}${v}`;
+      }).join(" ");
+      return `
+        <div class="choice-card" data-id="${p.id}" onclick="Game.selectProvince('${p.id}')">
+          <div class="card-check">✓</div>
+          <h3>${p.emoji} ${p.name}</h3>
+          <div class="card-desc">${p.desc}</div>
+          <div class="card-effects">${fx} · ${p.dialect}</div>
+          <div class="card-desc" style="margin-top:8px;color:#166534;">${p.perk}</div>
+          <div class="card-desc" style="color:#1e40af;">🗺️ 专属彩蛋：${p.signature}</div>
+        </div>
+      `;
+    }).join("");
+    this.addConfirmBar("provinceGrid", "确认地区 →", "Game.confirmProvince()");
+  },
+
+  selectProvince(id) {
+    this._selectedProvince = id;
+    document.querySelectorAll("#provinceGrid .choice-card").forEach(card => {
+      if (card.getAttribute("data-id") === id) card.classList.add("selected");
+      else card.classList.remove("selected");
+    });
+  },
+
+  confirmProvince() {
+    if (!this._selectedProvince) {
+      toast("先选一个地区", "normal", 1500);
+      return;
+    }
+    const prov = PROVINCES.find(p => p.id === this._selectedProvince);
+    Player.province = this._selectedProvince;
+    // 应用地区初始数值
+    this.applyEffects(prov.init);
+    toast(`🗺️ 已选 ${prov.name} · ${prov.signature}`, "achievement", 2200);
+    this._selectedProvince = null;
     showScreen("screen-lifetags");
   },
 
@@ -845,6 +899,9 @@ const Game = {
     this.renderPathPartners();
     this.renderActions();
 
+    // v0.8: 地区彩蛋事件（优先级最高，独立于身份事件）
+    if (this.triggerProvinceEvent()) return;
+
     // v0.7: 身份事件引擎（优先级最高：强制触发的警告/处罚会立即打断）
     if (this.triggerIdentityEvent()) return;
 
@@ -1137,9 +1194,14 @@ const Game = {
       event.id.startsWith("xuandiao_") || event.id.startsWith("sanben_") ||
       event.id.startsWith("haigui_") || event.id.startsWith("35plus_") ||
       event.id.startsWith("baoma_"));
+    // v0.8: 地区彩蛋事件标识
+    const isProvinceEvent = event.id && ["shaanxi_chuizi","guangdong_lgzai","shandong_kaogongwudi",
+      "henan_yiyiren","jiangsu_sunnansubei","sichuan_bashi","beijing_juanwang"].includes(event.id);
     const isCritical = event.id === "bianzhi_warning" || event.id === "bianzhi_punishment";
     if (isCritical) {
       eventBox.classList.add("critical-event");
+    } else if (isProvinceEvent) {
+      eventBox.classList.add("province-event");
     } else if (isIdentityEvent) {
       eventBox.classList.add("identity-event");
     }
@@ -1224,6 +1286,15 @@ const Game = {
       Player._eventTags.push(choice.tagEvent);
     }
 
+    // v0.8: 嘲讽NPC记录系统（用于上岸后前倨后恭期）
+    if (choice.mockeryNPC) {
+      Player._mockeryNPCs = Player._mockeryNPCs || [];
+      const npcs = Array.isArray(choice.mockeryNPC) ? choice.mockeryNPC : [choice.mockeryNPC];
+      npcs.forEach(n => {
+        if (!Player._mockeryNPCs.includes(n)) Player._mockeryNPCs.push(n);
+      });
+    }
+
     // v0.7: 身份事件引擎 tag 处理（tag 可为字符串或数组）
     const tags = Array.isArray(choice.tag) ? choice.tag : (choice.tag ? [choice.tag] : []);
     if (tags.includes("moyu")) {
@@ -1254,8 +1325,43 @@ const Game = {
     }
 
     $("eventBox").style.display = "none";
+
+    // v0.8: 上岸消息轰炸模式——解决一个事件后继续下一个
+    if (this._shanganMode) {
+      this._shanganMode = false;
+      // 标记第一波完成
+      if (event.id === "shangan_bombardment") Player._bombardmentDone = true;
+      // 已用事件标记（避免重复触发）
+      Player.usedEvents.add(event.id);
+      setTimeout(() => this._nextShanganEvent(), 800);
+      return;
+    }
+
     SaveSystem.autoSave("事件解决: " + event.title);
     this.startDayActions();
+  },
+
+  // v0.8: 地区彩蛋事件引擎
+  triggerProvinceEvent() {
+    if (!Player.province) return false;
+    const ctx = this.makeContext();
+    const pid = Player.province;
+    const prov = PROVINCES.find(p => p.id === pid);
+    if (!prov || !prov.easterEggEvent) return false;
+
+    // 节奏：地区彩蛋每 5-8 天最多触发1次
+    const daysSince = Player.daysPlayed - (Player.lastProvinceEventDay || 0);
+    if (daysSince < 5 + Math.floor(Math.random() * 4)) return false;
+
+    // 只触发该地区的彩蛋事件
+    const event = EVENTS.find(e => e.id === prov.easterEggEvent);
+    if (!event || Player.usedEvents.has(event.id)) return false;
+    if (event.cond && !event.cond(ctx)) return false;
+
+    Player.usedEvents.add(event.id);
+    Player.lastProvinceEventDay = Player.daysPlayed;
+    this.showEvent(event);
+    return true;
   },
 
   // v0.7: 身份专属事件引擎
@@ -1318,11 +1424,70 @@ const Game = {
   endGame(forceId) {
     let ending;
     if (forceId === "early_bengkui") ending = ENDINGS.find(e => e.id === "bengkui");
+    else if (forceId) ending = ENDINGS.find(e => e.id === forceId);
     else ending = this.pickEnding();
     if (!ending) ending = DEFAULT_ENDING;
 
     (ending.autoAchievements || []).forEach(a => Player.achievements.add(a));
 
+    // v0.8: 上岸结局触发消息轰炸事件链
+    if (ending.type === "good" && !Player._shanganSequenceDone) {
+      Player._isShangan = true;
+      Player._shanganEnding = ending;  // 暂存结局，轰炸完再展示
+      this.startShanganSequence();
+      return;
+    }
+
+    this._finalizeEnding(ending);
+  },
+
+  // v0.8: 上岸消息轰炸序列
+  _shanganQueue: [],
+  startShanganSequence() {
+    // 构建消息轰炸事件队列
+    this._shanganQueue = [];
+    const mockery = Player._mockeryNPCs || [];
+    // 第一波：消息轰炸（必触发）
+    this._shanganQueue.push("shangan_bombardment");
+    // 第二波：根据嘲讽NPC触发反转电话
+    if (mockery.includes("butcher")) this._shanganQueue.push("shangan_butcher_call");
+    if (mockery.includes("laowang")) this._shanganQueue.push("shangan_laowang_call");
+    if (mockery.includes("biaomei")) this._shanganQueue.push("shangan_biaomei_call");
+    // 第三波：家族群发言（嘲讽NPC>=2时触发）
+    if (mockery.length >= 2) this._shanganQueue.push("shangan_laoye_qing");
+
+    this._nextShanganEvent();
+  },
+
+  _nextShanganEvent() {
+    if (this._shanganQueue.length === 0) {
+      // 轰炸结束，展示结局
+      Player._shanganSequenceDone = true;
+      Player._bombardmentDone = true;
+      const ending = Player._shanganEnding;
+      if (ending.id === "shangan_fengdian") {
+        this.playFanjinCutscene(() => this.renderEnding(ending));
+      } else {
+        this.renderEnding(ending);
+      }
+      return;
+    }
+    const eventId = this._shanganQueue.shift();
+    const event = EVENTS.find(e => e.id === eventId);
+    if (!event) { this._nextShanganEvent(); return; }
+
+    // 第一波后标记 bombardmentDone
+    if (eventId === "shangan_bombardment") {
+      // 在 resolveEvent 后设置标记
+      const origResolve = this.resolveEvent.bind(this);
+      // 用 hack 方式：在 showEvent 之前设置一个回调
+    }
+    // 显示事件，解决后继续下一个
+    this._shanganMode = true;
+    this.showEvent(event);
+  },
+
+  _finalizeEnding(ending) {
     // 记录结局到meta
     const meta = SaveSystem.loadMeta();
     meta.bestEndings = meta.bestEndings || [];
@@ -1434,6 +1599,18 @@ const Game = {
     Player.moneyMonthlyPenalty = 0; // 降薪debuff：每月money-N
     Player.moneyPenaltyMonths = 0;  // 降薪持续月数
     Player.lastIdentityEventDay = 0;// 上次触发身份事件的天数
+    // v0.8: 地区菜单系统
+    Player.province = null;
+    Player.lastProvinceEventDay = 0;
+    // v0.8: 嘲讽NPC记录
+    Player._mockeryNPCs = [];
+    // v0.8: 上岸消息轰炸状态
+    Player._isShangan = false;
+    Player._shanganEnding = null;
+    Player._shanganSequenceDone = false;
+    Player._bombardmentDone = false;
+    this._shanganQueue = [];
+    this._shanganMode = false;
     const log = $("logBox");
     if (log) log.innerHTML = "";
     // P0: 清掉旧存档，新开一局不读旧档

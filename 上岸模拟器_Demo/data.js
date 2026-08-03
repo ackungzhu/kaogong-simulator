@@ -313,6 +313,140 @@ const START_MONTHS = [
     desc: "背水一战·绝境战士", delta: { study: -20, mood: -10, sanity: -15 } },
 ];
 
+// ========== 地区菜单系统（v0.8 思路#5）==========
+// 每个地区影响：报录比/方言彩蛋/亲戚文案/范进体系变体
+const PROVINCES = [
+  {
+    id: "shaanxi", emoji: "🏔️", name: "陕西", dialect: "关中话",
+    desc: "三秦大地·考公重镇",
+    init: { study: 3, mood: 2 },  // 西北教育扎实
+    perk: "方言彩蛋：「信不信额锤死你」触发概率+100%",
+    // 当本地亲戚打电话时，文案会带关中话"额/咧/么"
+    dialectFlavor: ["额", "咧", "么", "咋", "实诚"],
+    signature: "信不信额锤死你",  // 该地区专属梗
+    // 该地区的"范进式"亲戚——胡屠户变体
+    fanfanVariants: {
+      butcher: "杀猪的老张（关中屠户变体）",
+      insults: [
+        "你这娃，尖嘴猴腮的，也配考公？撒泡尿自己照照！",
+        "额跟你说，你这就是癞蛤蟆想吃天鹅肉！",
+        "考啥考咧？额看你去集上卖红薯都比这强！",
+      ],
+      postShangan: "老张杀猪生意也不干咧！见你就喊'张老爷好！'",
+    },
+    // 地区菜单触发彩蛋事件ID
+    easterEggEvent: "shaanxi_chuizi",
+  },
+  {
+    id: "guangdong", emoji: "🌊", name: "广东", dialect: "粤语",
+    desc: "大湾区的尽头是编制",
+    init: { study: 0, money: 10 },  // 经济发达，考公动力弱
+    perk: "工资基准+15%（珠三角公务员待遇全国第一梯队）",
+    dialectFlavor: ["嘞", "咩", "嘅", "咯", "靓仔"],
+    signature: "上岸就系靓仔",
+    fanfanVariants: {
+      butcher: "卖烧鹅的陈伯（粤语屠户变体）",
+      insults: [
+        "你呢个衰仔，考咩公务员嘞，做生意见工啦！",
+        "癞蛤蟆想食天鹅肉咩？你睇下自己几斤几两！",
+        "考公？广东人唔考公嘅，做生意先系正道！",
+      ],
+      postShangan: "陈伯烧鹅铺关门三天，逢人就讲'呢个就系我以前闹嘅衰仔！'",
+    },
+    easterEggEvent: "guangdong_lgzai",
+  },
+  {
+    id: "shandong", emoji: "🌾", name: "山东", dialect: "山东话",
+    desc: "不孝有三·不考公为大",
+    init: { study: 8, relation: 5 },  // 考公氛围全国第一
+    perk: "亲戚期望值×3，所有'亲戚电话'事件心态额外-5（压力源头）",
+    dialectFlavor: ["俺", "中", "得劲", "胡咧咧"],
+    signature: "山东人不考公，那跟咸鱼有啥区别",
+    fanfanVariants: {
+      butcher: "杀猪的王大伯（山东屠户变体）",
+      insults: [
+        "俺说你这孩子，尖嘴猴腮的，还想考公务员？撒泡尿照照！",
+        "癞蛤蟆想吃天鹅肉？俺看你连蛤蟆都不如！",
+        "考啥考？俺看你去集上卖大葱都比这强！赶紧找个班上！",
+      ],
+      postShangan: "王大伯杀猪生意也不干了，逢人就讲'俺早就说这孩子中！'",
+    },
+    easterEggEvent: "shandong_kaogongwudi",
+  },
+  {
+    id: "henan", emoji: "🏛️", name: "河南", dialect: "中原话",
+    desc: "一亿人的独木桥",
+    init: { study: 5, mood: -3 },  // 考生多，竞争惨烈
+    perk: "报录比+20%（河南考生全国最多），但'逆袭'结局概率+10%",
+    dialectFlavor: ["中不中", "弄啥咧", "得劲", "可不咋地"],
+    signature: "一亿人抢一个岗",
+    fanfanVariants: {
+      butcher: "杀猪的李叔（中原屠户变体）",
+      insults: [
+        "你这娃，弄啥咧？尖嘴猴腮还想考公？撒泡尿照照！",
+        "癞蛤蟆想吃天鹅肉？一亿人里你算老几？",
+        "考啥考？去郑州进厂打工都比这强！别胡咧咧了！",
+      ],
+      postShangan: "李叔逢人就讲'俺侄子考上咧！一亿人里挑出来嘞！'",
+    },
+    easterEggEvent: "henan_yiyiren",
+  },
+  {
+    id: "jiangsu", emoji: "🌸", name: "江苏", dialect: "吴语",
+    desc: "苏南苏北·两个世界",
+    init: { study: 5, money: 8 },
+    perk: "苏南苏北分裂事件触发——选苏南岗+金钱/选苏北岗+复习",
+    dialectFlavor: ["阿是", "弗要", "蛮好", "作啥"],
+    signature: "苏南苏北，考公两条赛道",
+    fanfanVariants: {
+      butcher: "卖卤菜的阿叔（吴语屠户变体）",
+      insults: [
+        "阿是你这个小孩，尖嘴猴腮，考啥公务员？弗要做梦了！",
+        "癞蛤蟆想吃天鹅肉？侬看看自己啥条件！",
+        "考公？去苏州电子厂上班蛮好，作啥要考公？",
+      ],
+      postShangan: "阿叔卤菜铺挂红幅'恭喜本巷居民张老爷高中公务员'",
+    },
+    easterEggEvent: "jiangsu_sunnansubei",
+  },
+  {
+    id: "sichuan", emoji: "🌶️", name: "四川", dialect: "四川话",
+    desc: "巴适得很·但还是想上岸",
+    init: { study: 2, mood: 5 },  // 生活节奏慢，心态好
+    perk: "每月心态自动+2（巴适buff），但复习效率-1",
+    dialectFlavor: ["要得", "巴适", "锤子", "瓜娃子", "莫得"],
+    signature: "考公要得，但安逸也要得",
+    fanfanVariants: {
+      butcher: "卖火锅底料的刘伯（蜀地屠户变体）",
+      insults: [
+        "你这瓜娃子，尖嘴猴腮的，考啥子公务员嘛！撒泡尿照照！",
+        "癞蛤蟆想吃天鹅肉？莫得那个命！",
+        "考啥子考？去成都打麻将都比这安逸！",
+      ],
+      postShangan: "刘伯火锅店免费三天，逢人就讲'额侄子考上公务员咧，巴适得很！'",
+    },
+    easterEggEvent: "sichuan_bashi",
+  },
+  {
+    id: "beijing", emoji: "🏯", name: "北京", dialect: "京腔",
+    desc: "首善之区·卷王之王",
+    init: { study: 8, sanity: -5 },  // 卷度拉满，精神压力大
+    perk: "国考主场优势——笔试+3分加成，但精神消耗+50%",
+    dialectFlavor: ["您", "嘿", "爷们儿", "甭", "咋整"],
+    signature: "在北京考公，您得有两把刷子",
+    fanfanVariants: {
+      butcher: "卖卤煮的张爷们儿（京腔屠户变体）",
+      insults: [
+        "嘿！您这尖嘴猴腮的样儿，还考公务员？甭做梦了！",
+        "癞蛤蟆想吃天鹅肉？您配吗？",
+        "考啥公务员？去国贸上班多体面！甭搁这儿耗着！",
+      ],
+      postShangan: "张爷们儿卤煮店挂横幅'祝贺街坊张老爷高中公务员'",
+    },
+    easterEggEvent: "beijing_juanwang",
+  },
+];
+
 // ========== 邪修路线（新） ==========
 // 在早期某个月份触发"学习方法选择"事件，决定后续buff
 const LEARNING_PATHS = {
@@ -394,11 +528,11 @@ const EVENTS = [
 你想起小时候你爸喝醉了说过类似的话。`,
     choices: [
       { label: "A", text: '"癞蛤蟆想吃天鹅肉，怎么了！"（愤怒反驳）',
-        effects: { mood: 5, relation: -10, sanity: -5 }, achievement: "癞蛤蟆想吃天鹅肉" },
+        effects: { mood: 5, relation: -10, sanity: -5 }, mockeryNPC: "butcher", achievement: "癞蛤蟆想吃天鹅肉" },
       { label: "B", text: "默默关闭对话框，打开行测题册",
-        effects: { study: 5, mood: -8 } },
+        effects: { study: 5, mood: -8 }, mockeryNPC: "butcher" },
       { label: "C", text: '"你说得对，我不考了"（放弃）',
-        effects: { study: -15, mood: 10, sanity: 5 } },
+        effects: { study: -15, mood: 10, sanity: 5 }, mockeryNPC: "butcher" },
     ]
   },
 
@@ -918,7 +1052,7 @@ D. 她在暗示我多吃饭对学习好
 首页推送：<em>"国考最终招录名单公布，你的那个岗位 1:842。"</em>`,
     choices: [
       { label: "A", text: "深呼吸，出去挨个回答",
-        effects: { mood: -15, relation: 8, sanity: -10 } },
+        effects: { mood: -15, relation: 8, sanity: -10 }, mockeryNPC: "erji" },
       { label: "B", text: "继续躲 2 小时", effects: { mood: 5, relation: -10 } },
       { label: "C", text: '把新闻截图发家族群："喂各位看看"',
         effects: { mood: 15, relation: -15 }, achievement: "显眼包" },
@@ -1348,6 +1482,7 @@ D. 她在暗示我多吃饭对学习好
         effects: { mood: 3, sanity: 2 } },
       { label: "C", text: '把表妹的微信设成"仅聊天"',
         effects: { mood: -5, sanity: 3, relation: -5 },
+        mockeryNPC: "biaomei",
         achievement: "我不要你管" },
     ]
   },
@@ -1637,6 +1772,7 @@ HR 递过来一份文件。
     choices: [
       { label: "A", text: '"恭喜恭喜！"（发完默默关掉群聊）',
         effects: { mood: -8, relation: 3 },
+        mockeryNPC: "laowang",
         achievement: "强颜欢笑" },
       { label: "B", text: '"考公稳定，你们 35 岁就失业。"',
         effects: { mood: 3, relation: -5, sanity: -3 },
@@ -2490,6 +2626,448 @@ HR 递过来一份文件。
         achievement: "最后一次" }
     ]
   },
+
+  // ============ v0.8 地区彩蛋事件 ============
+
+  // ---- 陕西：「信不信额锤死你」彩蛋 ----
+  {
+    id: "shaanxi_chuizi",
+    title: "信不信额锤死你",
+    rarity: "rare",
+    rarityWeight: 1.2,
+    cond: (p) => p.province === "shaanxi" && p.monthsPlayed >= 2,
+    desc: `你在自习室做题。
+
+隔壁桌的关中大哥看你翻来覆去算同一道资料分析，
+突然拍桌子：
+
+<em>"兄弟，这题额教你！信不信额锤死你！"</em>
+
+——你吓了一跳。
+但他真的教你了。用的是关中话。
+你居然听懂了。
+
+临走他说：<em>"考公这事，额跟你说，就是个锤子事。坚持就行咧。"</em>
+
+他把"锤子"当语气词用。
+你把"锤死"当鼓励用。`,
+    choices: [
+      { label: "A", text: '"谢谢大哥！额也觉得能行！"',
+        effects: { study: 12, mood: 10, sanity: 5 },
+        achievement: "锤子精神" },
+      { label: "B", text: '"大哥，额锤死的是题，不是你。"',
+        effects: { study: 8, mood: 15, relation: 5 },
+        achievement: "关中相声" },
+      { label: "C", text: '"额信。额信。"',
+        effects: { sanity: 8, mood: 5 },
+        achievement: "怂了但记住了" }
+    ]
+  },
+
+  // ---- 广东：靓仔上岸 ----
+  {
+    id: "guangdong_lgzai",
+    title: "上岸就系靓仔",
+    rarity: "rare",
+    rarityWeight: 1.0,
+    cond: (p) => p.province === "guangdong" && p.monthsPlayed >= 3,
+    desc: `茶餐厅。
+
+你边吃菠萝包边刷行测。
+隔壁桌两个阿伯在聊天：
+
+<em>"现在啲后生仔，唔做生意，去考公务员。"</em>
+<em>"考到咪靓仔咯，考唔到咪……"</em>
+<em>"衰仔咯。"</em>
+
+你低头看自己——
+《行测5000题》做到第847题，正确率61%。
+——你算靓仔还是衰仔？`,
+    choices: [
+      { label: "A", text: '"靓仔！额考得到！"（广东话带陕西腔）',
+        effects: { mood: 15, study: 5 },
+        achievement: "跨省靓仔" },
+      { label: "B", text: '"唔该，打包。"',
+        effects: { money: -2, sanity: 5, study: 3 },
+        achievement: "粤语十级" },
+      { label: "C", text: '"衰仔就衰仔，反正额在努力。"',
+        effects: { mood: 5, study: 8, sanity: -3 },
+        achievement: "认了但不躺" }
+    ]
+  },
+
+  // ---- 山东：不孝有三·不考公为大 ----
+  {
+    id: "shandong_kaogongwudi",
+    title: "不孝有三·不考公为大",
+    rarity: "rare",
+    rarityWeight: 1.2,
+    cond: (p) => p.province === "shandong" && p.monthsPlayed >= 1,
+    desc: `大年初一。
+家族群12个人。
+
+二大爷：<em>"XX，你考研还是考公？"</em>
+三姑：<em>"俺家那口子说了，不考公就是不孝！"</em>
+堂哥（已上岸省厅）：<em>"考公好啊，稳定，体面。"</em>
+
+你妈私下给你发：
+<em>"儿子，你就考一个吧，妈跟亲戚没法交代了。"</em>
+
+——山东人。
+不考公 = 不孝。
+考公 = 尽孝。
+考研 = 另一种尽孝。
+进厂 = 不孝+不肖+不伦不类。`,
+    choices: [
+      { label: "A", text: '"妈，俺考，俺一定考上。"',
+        effects: { relation: 10, study: 8, mood: -5 },
+        achievement: "大孝子" },
+      { label: "B", text: '"二大爷，俺想创业！"（炸群）',
+        effects: { relation: -15, mood: 8, sanity: 5 },
+        achievement: "不肖子孙" },
+      { label: "C", text: '"俺二战，给俺一年。"',
+        effects: { study: 5, mood: -3, relation: 3 },
+        achievement: "再战一年" }
+    ]
+  },
+
+  // ---- 河南：一亿人抢一个岗 ----
+  {
+    id: "henan_yiyiren",
+    title: "一亿人抢一个岗",
+    rarity: "epic",
+    rarityWeight: 0.5,
+    cond: (p) => p.province === "henan" && p.monthsPlayed >= 4,
+    desc: `岗位表下来了。
+
+你报的岗位：
+<em>郑州市XX区 · 综合管理岗 · 招1人</em>
+
+报名人数：<em>3,847 人</em>
+报录比：<em>1:3847</em>
+
+你看了三遍这个数字。
+3847。
+河南一亿人，有 3847 个跟你抢同一个岗。
+
+你想起了高考那年。
+河南 125 万考生。
+你当时排全省 8,734 名。
+你觉得那已经是地狱了。
+
+——现在你才知道，那只是热身。`,
+    choices: [
+      { label: "A", text: '"一亿人又咋了？额就是那一个！"',
+        effects: { study: 20, mood: -8, sanity: -5 },
+        achievement: "一亿分之一的勇士" },
+      { label: "B", text: '"要不……换个乡镇岗？"（报录比1:200）',
+        effects: { mood: 5, study: -5, relation: 3 },
+        achievement: "战略转移" },
+      { label: "C", text: '"额不考了，去郑州进厂。"',
+        effects: { study: -15, money: 10, mood: -5 },
+        achievement: "卷不动了" }
+    ]
+  },
+
+  // ---- 江苏：苏南苏北分裂 ----
+  {
+    id: "jiangsu_sunnansubei",
+    title: "苏南苏北·两条赛道",
+    rarity: "rare",
+    rarityWeight: 1.0,
+    cond: (p) => p.province === "jiangsu" && p.monthsPlayed >= 3,
+    desc: `岗位表上有两个选择：
+
+<em>A. 苏州昆山 · 招1人 · 报录比 1:847</em>
+   待遇：年薪25W+，公积金4000/月，长三角天花板
+
+<em>B. 苏北宿迁 · 招1人 · 报录比 1:120</em>
+   待遇：年薪10W，公积金1500/月，但上岸率高7倍
+
+你表姐打电话来：
+<em>"你要是考苏南，全家族脸上有光。"</em>
+<em>"你要是考苏北……也行，但别跟人说。"</em>
+
+——江苏省。
+一个省，两个世界。`,
+    choices: [
+      { label: "A", text: "报苏南昆山——卷就卷个最狠的",
+        effects: { study: 15, money: 5, sanity: -8 },
+        achievement: "苏南卷王" },
+      { label: "B", text: "报苏北宿迁——上岸才是硬道理",
+        effects: { study: -3, money: 3, mood: 5, relation: -3 },
+        achievement: "苏北务实派" },
+      { label: "C", text: '"阿是弗能两个都报？"（不能）',
+        effects: { sanity: -5, mood: -3 },
+        achievement: "既要又要" }
+    ]
+  },
+
+  // ---- 四川：巴适得很 ----
+  {
+    id: "sichuan_bashi",
+    title: "考公要得，但安逸也要得",
+    rarity: "common",
+    rarityWeight: 2.0,
+    cond: (p) => p.province === "sichuan" && p.monthsPlayed >= 2,
+    desc: `成都，茶馆。
+
+你端着盖碗茶，手机架在茶碗旁边，
+视频里在讲"行测资料分析速算技巧"。
+
+旁边打麻将的大爷看你一眼：
+<em>"瓜娃子，考啥子公务员嘛，来打两圈嘛！"</em>
+
+你摇头。
+大爷又说：<em>"考公要得，但安逸也要得。莫把自己整瓜了。"</em>
+
+——你觉得他说得对。
+但你的盖碗茶已经凉了。
+视频也过了3讲。`,
+    choices: [
+      { label: "A", text: '"大爷说得对，额再学一会儿就去打麻将。"',
+        effects: { study: 5, mood: 8, sanity: 5 },
+        achievement: "巴适平衡术" },
+      { label: "B", text: '"不打！额要上岸！"（关掉视频继续刷题）',
+        effects: { study: 12, mood: -5, sanity: -3 },
+        achievement: "卷王出川" },
+      { label: "C", text: '"来嘛，打一圈！题晚上再做。"',
+        effects: { mood: 15, study: -8, money: -2 },
+        achievement: "麻将优先" }
+    ]
+  },
+
+  // ---- 北京：卷王之王 ----
+  {
+    id: "beijing_juanwang",
+    title: "在北京考公，您得有两把刷子",
+    rarity: "rare",
+    rarityWeight: 1.0,
+    cond: (p) => p.province === "beijing" && p.monthsPlayed >= 3,
+    desc: `中关村某咖啡馆。
+
+你旁边一桌三个人，全在刷行测。
+一个清北的，一个人大的，一个北师的。
+
+清北那个：
+<em>"嘿，您这题选C啊，这都不懂？"</em>
+
+人大的：
+<em>"甭说了，我国考145，省考148，面试被刷了。"</em>
+
+北师的默默拿出一个本子，上面写着：
+<em>"第47次模考，行测78，申论72。"</em>
+
+——47次。
+你看了看自己的模考记录：8次。
+最高分：行测59。
+
+你默默把咖啡杯往里挪了挪，
+假装在刷小红书。`,
+    choices: [
+      { label: "A", text: '"甭比了，额就是那个分低的。"',
+        effects: { mood: -10, sanity: -5 },
+        achievement: "自暴自弃" },
+      { label: "B", text: '"嘿！您47次算啥，额来北京就是为了卷死你们！"',
+        effects: { study: 15, mood: 5, sanity: -8 },
+        achievement: "卷王之王" },
+      { label: "C", text: "默默收拾东西，换一家咖啡馆",
+        effects: { money: -3, sanity: 5, study: 3 },
+        achievement: "逃离中关村" }
+    ]
+  },
+
+  // ============ v0.8 范进第四阶段·上岸消息轰炸系统 ============
+
+  // ---- 上岸后第一波：消息轰炸 ----
+  {
+    id: "shangan_bombardment",
+    title: "消息轰炸·上岸后的两小时",
+    rarity: "legendary",
+    rarityWeight: 1.0,
+    cond: (p) => p._isShangan && !p._bombardmentDone,
+    desc: `你挂了人事局的电话。
+
+3 分钟内，你的手机震了 <em>47 次</em>。
+
+班级群：<em>"卧槽！！！XX考上了！！！"（23条）</em>
+家族群：<em>"恭喜恭喜！沾沾喜气！"（18条）</em>
+朋友圈：你还没发，已经有 6 个人替你发了。
+
+——你还没来得及高兴，
+世界已经替你高兴完了。
+
+你妈冲进你房间，抱着你哭了。
+你爸在门口站了 3 秒，转身去厨房，开了瓶放了 10 年的茅台。
+
+手机又震了。
+这次是——<em>二姑。</em>`,
+    choices: [
+      { label: "A", text: '"谢谢二姑！"',
+        effects: { relation: 10, mood: 5 },
+        mockeryNPC: "erji",
+        achievement: "七八个轿子" },
+      { label: "B", text: '"二姑，我忙着呢，晚点说。"（挂断）',
+        effects: { sanity: 5, mood: -3, relation: -5 },
+        achievement: "飘了" },
+      { label: "C", text: '"二姑，你之前不是说表妹大专都进税务局了吗？"（阴阳回去）',
+        effects: { mood: 20, relation: -15, sanity: 5 },
+        mockeryNPC: "erji",
+        achievement: "外耗大师·上岸版" }
+    ]
+  },
+
+  // ---- 上岸后第二波：电话轰炸·胡屠户变体 ----
+  {
+    id: "shangan_butcher_call",
+    title: "胡屠户的电话·态度180°转变",
+    rarity: "epic",
+    rarityWeight: 1.0,
+    cond: (p) => p._isShangan && p._bombardmentDone && (p._mockeryNPCs || []).includes("butcher"),
+    desc: `第二天早上 7:23。
+
+来电显示：<em>老张（杀猪的）</em>
+
+你犹豫了 3 秒，接了。
+
+<em>"XX啊！额跟你说，额早就知道你能行！"</em>
+<em>"额那时候说你，那是为了激励你！你也知道额这人嘴笨……"</em>
+<em>"对了，额杀猪生意也不干咧！以后就跟着你享福咧！"</em>
+
+——你想起了 8 个月前，
+他在集上说：
+<em>"你这娃，尖嘴猴腮的，也配考公？撒泡尿自己照照！"</em>
+
+<em>"癞蛤蟆想吃天鹅肉！"</em>
+
+<em>"考啥考咧？额看你去集上卖红薯都比这强！"</em>
+
+现在他说：
+<em>"额那时候就是嘴硬！心里一直觉得你能行！"</em>
+
+你笑了。
+你也哭了。`,
+    choices: [
+      { label: "A", text: '"张叔，谢谢你当时的激励。"（客气回应）',
+        effects: { relation: 15, mood: 10 },
+        achievement: "杀猪生意也不干了" },
+      { label: "B", text: '"张叔，你之前说额癞蛤蟆想吃天鹅肉，现在呢？"（阴阳回去）',
+        effects: { mood: 25, relation: -10, sanity: 5 },
+        achievement: "范进·复仇版" },
+      { label: "C", text: '"张叔，额忙着呢，改天再聊。"（挂断）',
+        effects: { sanity: 8, mood: -3 },
+        achievement: "懒得计较" }
+    ]
+  },
+
+  // ---- 上岸后第二波：室友老王反转（985专属） ----
+  {
+    id: "shangan_laowang_call",
+    title: "室友老王的私信",
+    rarity: "rare",
+    rarityWeight: 1.0,
+    cond: (p) => p._isShangan && p._bombardmentDone && (p._mockeryNPCs || []).includes("laowang"),
+    desc: `微信弹窗。
+
+<em>老王：卧槽！你真考上了？？？</em>
+<em>老王：牛逼啊！！！</em>
+<em>老王：兄弟我上个月被裁了……</em>
+<em>老王：字节裁员第二波，P7 也没用。</em>
+<em>老王：那个……你那个单位，能内推吗？</em>
+<em>老王：我知道公务员不好内推，但……</em>
+<em>老王：算了算了，我就是问问。恭喜你啊。</em>
+
+——8 个月前，他在群里发：
+<em>"兄弟们，我字节 SP，60 包，base 北京。"</em>
+<em>"XX 呢？听说你也在准备考试？"</em>
+
+你打了三个字"在准备"，又删了。
+最后发了一个"👍"。
+
+现在他问你能不能内推。`,
+    choices: [
+      { label: "A", text: '"恭喜你被裁。你说得对，赛道不一样。"（阴阳回去）',
+        effects: { mood: 30, relation: -20, sanity: -5 },
+        achievement: "时来运转" },
+      { label: "B", text: '"兄弟，公务员没法内推。但我可以帮你看看岗位表。"',
+        effects: { relation: 10, mood: 5 },
+        achievement: "以德报怨" },
+      { label: "C", text: '"已读不回。"',
+        effects: { sanity: 5, mood: 3 },
+        achievement: "体面的沉默" }
+    ]
+  },
+
+  // ---- 上岸后第二波：表妹反转 ----
+  {
+    id: "shangan_biaomei_call",
+    title: "表妹的微信",
+    rarity: "rare",
+    rarityWeight: 1.0,
+    cond: (p) => p._isShangan && p._bombardmentDone && (p._mockeryNPCs || []).includes("biaomei"),
+    desc: `表妹发来微信：
+
+<em>"哥！！！你太厉害了！！！"</em>
+<em>"我今年模考才61，你能教我吗？"  </em>
+<em>"对了，我之前说的那句话……你别放在心上。"</em>
+<em>"我就是嘴笨。其实我一直觉得你能考上。"</em>
+
+——你想起了 6 个月前，她说：
+<em>"哥，我看你发的朋友圈，感觉你压力好大。"</em>
+<em>"实在不行就……工作嘛，不是只有公务员。"</em>
+
+那时候你把她的微信设成了"仅聊天"。
+
+现在她问你能教她吗。`,
+    choices: [
+      { label: "A", text: '"行，我教你。"（不计前嫌）',
+        effects: { relation: 15, mood: 10, sanity: 5 },
+        achievement: "以德报怨" },
+      { label: "B", text: '"你之前不是说工作不是只有公务员吗？"',
+        effects: { mood: 15, relation: -8 },
+        achievement: "翻旧账" },
+      { label: "C", text: '"我看看吧，最近比较忙。"',
+        effects: { sanity: 3, relation: -3 },
+        achievement: "礼貌敷衍" }
+    ]
+  },
+
+  // ---- 上岸后第三波：家族群发言·老爷请 ----
+  {
+    id: "shangan_laoye_qing",
+    title: "家族群发言·老爷请",
+    rarity: "epic",
+    rarityWeight: 1.0,
+    cond: (p) => p._isShangan && p._bombardmentDone && (p._mockeryNPCs || []).length >= 2,
+    desc: `你在家族群发了一条：
+<em>"谢谢大家关心，我考上了。"</em>
+
+5 秒内，群里 28 个人全部回复。
+画风突变：
+
+二姑：<em>"我就说嘛！XX从小就聪明！我早就看出来！"</em>
+三舅：<em>"XX啊，三舅一直看好你！啥时候有空，来三舅家吃饭！"</em>
+表姑父：<em>"恭喜恭喜！对了，你那个单位……有没有合适的岗位？我家小军今年也考。"</em>
+王阿姨（非群成员但听到了）：<em>"我跟XX妈是老邻居了！三十年了！"</em>
+
+你爸在旁边小声说：
+<em>"你现在发个'坐了坐了'，他们就得回'老爷请'。"</em>
+
+——范进三百年前的剧本，
+今天在你身上重演了。`,
+    choices: [
+      { label: "A", text: '"谢谢大家！改天请大家吃饭！"（客气回应）',
+        effects: { relation: 20, mood: 10, money: -5 },
+        achievement: "老爷请" },
+      { label: "B", text: '"二姑，你之前说我考不上来着？"（翻旧账）',
+        effects: { mood: 25, relation: -10, sanity: 5 },
+        mockeryNPC: "erji",
+        achievement: "外耗大师·上岸版" },
+      { label: "C", text: '"已读不回，默默退出群聊。"',
+        effects: { sanity: 10, relation: -5 },
+        achievement: "事了拂衣去" }
+    ]
+  },
 ];
 
 // ========== 成就库 ==========
@@ -2601,6 +3179,39 @@ const ACHIEVEMENTS = {
   "不负此生": { desc: '"我已经走到这了，不能放弃。"' },
   "放下": { desc: '"好……我不考了。"' },
   "最后一次": { desc: '"再考最后一次，就一次。"' },
+  // v0.8 地区彩蛋成就
+  "锤子精神": { desc: "陕西考公人专属——'锤子'是语气词，也是信念。" },
+  "关中相声": { desc: "用关中话讲段子，自习室笑成一片。" },
+  "怂了但记住了": { desc: '"额信。额信。"——你怂了，但记住了这份善意。' },
+  "跨省靓仔": { desc: "陕西人说广东话——跨省考公人的勇气。" },
+  "粤语十级": { desc: '"唔该，打包。"——茶餐厅里的备考仪式。' },
+  "认了但不躺": { desc: "衰仔就衰仔，但额还在努力。" },
+  "大孝子": { desc: "山东人考公=尽孝。你是最孝顺的那个。" },
+  "不肖子孙": { desc: '"俺想创业！"——你在家族群炸了。' },
+  "再战一年": { desc: "山东二战——给俺一年，俺还你一个公务员。" },
+  "一亿分之一的勇士": { desc: "河南3847人抢1个岗，你是那1个。" },
+  "卷不动了": { desc: '"去郑州进厂"——河南考公人的退路。' },
+  "苏南卷王": { desc: "报苏南昆山——卷就卷个最狠的。" },
+  "苏北务实派": { desc: "报苏北宿迁——上岸才是硬道理。" },
+  "巴适平衡术": { desc: "成都茶馆考公——学一会儿，打一会儿。" },
+  "卷王出川": { desc: '"不打！额要上岸！"——四川卷王诞生。' },
+  "麻将优先": { desc: "题晚上再做，先打两圈。" },
+  "自暴自弃": { desc: '"额就是那个分低的。"——中关村咖啡馆的羞愧。' },
+  "卷王之王": { desc: "在北京考公，您得有两把刷子。你就是。" },
+  "逃离中关村": { desc: "换个咖啡馆=换个赛道。" },
+  // v0.8 范进第四阶段·上岸消息轰炸成就
+  "飘了": { desc: '"二姑，我忙着呢，晚点说。"——上岸第一天就飘了。' },
+  "外耗大师·上岸版": { desc: "上岸后阴阳回去——'你之前不是说……'，范进·复仇版。" },
+  "杀猪生意也不干了": { desc: "胡屠户态度180°转变。'额那时候就是嘴硬！'" },
+  "范进·复仇版": { desc: "上岸后翻旧账——'你之前说额癞蛤蟆想吃天鹅肉，现在呢？'" },
+  "懒得计较": { desc: '"张叔，额忙着呢，改天再聊。"——你已经不需要跟屠户计较了。' },
+  "时来运转": { desc: "室友老王被裁了，问你能不能内推。互联网35岁 vs 公务员铁饭碗。" },
+  "以德报怨": { desc: "别人嘲讽过你，你上岸后帮他。这才是格局。" },
+  "体面的沉默": { desc: "已读不回——对老王最好的回应。" },
+  "翻旧账": { desc: '"你之前不是说工作不是只有公务员吗？"——表妹沉默了。' },
+  "礼貌敷衍": { desc: '"我看看吧，最近比较忙。"——成年人的体面。' },
+  "老爷请": { desc: '"坐了坐了" / "老爷请"——范进三百年前的剧本，今天重演。' },
+  "事了拂衣去": { desc: "已读不回，默默退出群聊。深藏功与名。" },
   "正统学徒": { desc: "粉笔+中公+华图，传统考公路线。" },
   "邪修入门": { desc: "你选择了一条不走寻常路的备考方式。" },
   "邪修出关": { desc: "食堂大妈都成了你的言语理解陪练。" },

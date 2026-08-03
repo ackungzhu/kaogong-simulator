@@ -656,6 +656,18 @@ body::before {
   100% { transform: translateX(0); }
 }
 
+/* v0.8 地区彩蛋事件样式 */
+.event-box.province-event {
+  border-color: var(--green);
+  background: linear-gradient(180deg, white, #f0fff4 100%);
+}
+.event-box.province-event::before {
+  content: "🗺️ 地区彩蛋";
+  background: linear-gradient(90deg, var(--green), var(--blue));
+  color: white;
+  font-weight: 900;
+}
+
 /* v0.7 摸鱼/风险选项标识 */
 .choice-btn.risk-high {
   border-left: 4px solid var(--accent) !important;
