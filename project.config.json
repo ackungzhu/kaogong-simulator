@@ -1,0 +1,10 @@
+{
+  "description": "上岸模拟器微信小程序版",
+  "miniprogramRoot": "miniprogram/",
+  "projectname": "kaogong-miniprogram",
+  "appid": "touristappid",
+  "setting": {
+    "es6": true,
+    "minified": true
+  }
+}

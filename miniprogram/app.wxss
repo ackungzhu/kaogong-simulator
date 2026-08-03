@@ -1,0 +1,57 @@
+/* app.wxss - 全局样式 */
+page {
+  background: #0f0f1e;
+  color: rgba(255,255,255,0.9);
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+}
+
+.container {
+  padding: 20rpx;
+  max-width: 750rpx;
+  margin: 0 auto;
+}
+
+/* 毛玻璃卡片 */
+.card {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 24rpx;
+  padding: 24rpx;
+  backdrop-filter: blur(20rpx);
+}
+
+/* 按钮 */
+.btn-main {
+  background: linear-gradient(135deg, #d4a574, #c08b5c);
+  color: #1a1a2e;
+  border: none;
+  border-radius: 16rpx;
+  padding: 20rpx 40rpx;
+  font-size: 32rpx;
+  font-weight: bold;
+  text-align: center;
+}
+
+.btn-secondary {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 16rpx;
+  padding: 20rpx 40rpx;
+  font-size: 28rpx;
+  text-align: center;
+}
+
+/* 数值条 */
+.bar-track {
+  height: 20rpx;
+  border-radius: 10rpx;
+  background: rgba(255,255,255,0.12);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 10rpx;
+  transition: width 0.3s;
+}

@@ -1,0 +1,4 @@
+{
+  "desc": "上岸模拟器小程序版sitemap",
+  "rules": [{ "action": "allow", "page": "*" }]
+}

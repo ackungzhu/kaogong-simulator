@@ -1,0 +1,25 @@
+<!-- pages/start/index.wxml - 开始页 -->
+<view class="container">
+  <view class="logo">
+    <view class="logo-sub">2026 考公模拟</view>
+    <view class="logo-main">上岸模拟器</view>
+    <view class="logo-tag">v0.9 · 精力/精神双轴 · I/E人格 · 80+事件</view>
+  </view>
+
+  <view class="stats-preview">
+    <text class="stat-item">📚 复习</text>
+    <text class="stat-item">❤️ 心态</text>
+    <text class="stat-item">💰 钱包</text>
+    <text class="stat-item">🤝 关系</text>
+    <text class="stat-item">🧠 精神</text>
+  </view>
+
+  <view class="intro">
+    <text>你是一个考公人。</text>
+    <text>每天 24 小时，每个行动消耗具体时间。</text>
+    <text>连续早起会变强、连续赖床会昏睡到 11:00。</text>
+  </view>
+
+  <button class="btn-main" bindtap="goIdentity">开始备考</button>
+  <button wx:if="{{hasSave}}" class="btn-secondary" bindtap="continueGame">📂 继续游戏</button>
+</view>

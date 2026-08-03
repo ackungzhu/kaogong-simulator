@@ -1,0 +1,20 @@
+{
+  "pages": [
+    "pages/start/index",
+    "pages/identity/index",
+    "pages/province/index",
+    "pages/lifetags/index",
+    "pages/month/index",
+    "pages/game/index",
+    "pages/ending/index"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#1a1a2e",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "上岸模拟器",
+    "backgroundColor": "#0f0f1e",
+    "backgroundTextStyle": "light"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}
