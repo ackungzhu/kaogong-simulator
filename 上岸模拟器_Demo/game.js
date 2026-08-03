@@ -38,6 +38,15 @@ const Player = {
   // 内部
   pendingWake: true,        // 当天是否还需选择起床
   nightAlarm: 8,            // 闹钟设置时间
+  // v2 数值系统：精力（快变量）+ 精神（慢变量）+ 疲劳/状态机
+  energy: 80, energyMax: 80,        // 精力：日内可回充
+  studyHoursToday: 0,               // 今日累计学习时长
+  focusBlocks: 0,                   // 连续专注块
+  restedSinceBlock: true,           // 上一动作是否为休息（用于清零专注块）
+  status: "healthy",                // healthy|hangover|allnighter|breakdown|sick|severe
+  napCount: 0,                      // 当日小憩次数
+  todaySolo: 0, todaySocial: 0,     // 当日独处/社交动作计数（I/E 彩蛋用）
+  soloStreak: 0, socialStreak: 0,   // 连续纯独处/无社交天数
 };
 
 // ========== 节日/里程碑 ==========
@@ -70,7 +79,7 @@ function showScreen(id) {
 function toast(msg, type = "normal", duration = 1800) {
   const t = $("toast");
   t.textContent = msg;
-  t.className = type === "achievement" ? "show achievement" : "show";
+  t.className = type === "achievement" ? "show achievement" : (type === "warning" ? "show warning" : "show");
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.classList.remove("show"), duration);
 }
@@ -98,6 +107,12 @@ const SaveSystem = {
         actionLog: [...Player.actionLog],
         pendingWake: Player.pendingWake, nightAlarm: Player.nightAlarm,
         _examScore: Player._examScore || null,
+        // v2 数值系统字段
+        energy: Player.energy, energyMax: Player.energyMax,
+        status: Player.status, napCount: Player.napCount,
+        studyHoursToday: Player.studyHoursToday, focusBlocks: Player.focusBlocks,
+        restedSinceBlock: Player.restedSinceBlock,
+        todaySolo: Player.todaySolo, todaySocial: Player.todaySocial,
       }
     };
     try {
@@ -203,13 +218,7 @@ const UI = {
     setTimeout(() => card.classList.remove("just-executed"), 700);
   }
 };
-function toast(msg, type = "normal", duration = 1800) {
-  const t = $("toast");
-  t.textContent = msg;
-  t.className = type === "achievement" ? "show achievement" : "show";
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove("show"), duration);
-}
+// （删除了第221行重复的 toast 定义）
 
 // ========== 主流程 ==========
 const Game = {
@@ -283,6 +292,16 @@ const Game = {
     Player.lastProvinceEventDay = p.lastProvinceEventDay || 0;
     // v0.8: 恢复嘲讽NPC记录
     Player._mockeryNPCs = p._mockeryNPCs || [];
+    // v2 数值系统字段恢复
+    Player.energy = (p.energy != null) ? p.energy : 80;
+    Player.energyMax = (p.energyMax != null) ? p.energyMax : 80;
+    Player.status = p.status || "healthy";
+    Player.napCount = p.napCount || 0;
+    Player.studyHoursToday = p.studyHoursToday || 0;
+    Player.focusBlocks = p.focusBlocks || 0;
+    Player.restedSinceBlock = p.restedSinceBlock !== false;
+    Player.todaySolo = p.todaySolo || 0; Player.todaySocial = p.todaySocial || 0;
+    Player.soloStreak = p.soloStreak || 0; Player.socialStreak = p.socialStreak || 0;
 
     toast(`📂 已续读 · ${Player.month}月${Player.day}日 第${Player.daysPlayed + 1}天`, "achievement", 2000);
     showScreen("screen-game");
@@ -328,6 +347,7 @@ const Game = {
   },
 
   pickIdentity(id) {
+    this._initV2Fields();
     const ident = IDENTITIES.find(i => i.id === id);
     Player.identity = id;
     Object.assign(Player.stats, ident.init);
@@ -692,6 +712,11 @@ const Game = {
     if (sanityDelta || moodDelta) {
       this.applyEffects({ sanity: sanityDelta, mood: moodDelta });
     }
+    // v2: 起床选择影响精力
+    if (opt.energyDelta) {
+      Player.energy = clamp(Player.energy + opt.energyDelta, 0, Player.energyMax);
+      logMsg += ` — <i>精力${opt.energyDelta > 0 ? "+" : ""}${opt.energyDelta}</i>`;
+    }
     this.addLog(logMsg);
 
     UI.hideModal();
@@ -780,6 +805,187 @@ const Game = {
     return changes;
   },
 
+  // ========== v2 数值系统 ==========
+  _initV2Fields() {
+    Player.energy = 80; Player.energyMax = 80;
+    Player.studyHoursToday = 0; Player.focusBlocks = 0; Player.restedSinceBlock = true;
+    Player.status = "healthy"; Player.napCount = 0;
+    Player.todaySolo = 0; Player.todaySocial = 0;
+    Player.soloStreak = 0; Player.socialStreak = 0;
+  },
+
+  // 5.1 疲劳曲线（v2 缓降，正常地板 0.40）
+  _fatigueCurve(h) {
+    if (h < 4) return 1.0;
+    if (h < 6) return 0.90;
+    if (h < 8) return 0.80;
+    if (h < 10) return 0.65;
+    if (h < 12) return 0.50;
+    return 0.40; // 地板，不再下跌
+  },
+
+  // 5.2 状态乘数与地板
+  _stateMul(status) {
+    const S = {
+      healthy:    { mul: 1.0, floor: 0.40 },
+      hangover:   { mul: 0.8, floor: 0.30 },
+      allnighter: { mul: 0.8, floor: 0.30 },
+      breakdown:  { mul: 0.7, floor: 0.25 },
+      sick:       { mul: 0.5, floor: 0.20 },
+      severe:     { mul: 0.3, floor: 0.10 },
+    };
+    return S[status] || S.healthy;
+  },
+
+  fatigueCoef(h, status) {
+    const s = this._stateMul(status);
+    return Math.max(this._fatigueCurve(h) * s.mul, s.floor);
+  },
+
+  // 6.3 I/E 人格修正矩阵 + 淡人/浓人
+  applySocialPersona(act, d) {
+    const L = act.socialLoad || "solo";
+    const tags = Player.lifeTags || [];
+    if (tags.includes("iren")) {
+      if (L === "solo")  d.sanity = (d.sanity || 0) * 1.3;
+      if (L === "light") d.sanity = (d.sanity || 0) - 4;
+      if (L === "heavy") { d.sanity = (d.sanity || 0) - 15; d.energy = (d.energy || 0) - 10; }
+    } else if (tags.includes("eren")) {
+      d.sanity = (d.sanity || 0) * (L === "solo" ? 0.7 : 1.3);
+      if (L === "heavy") { d.sanity = (d.sanity || 0) + 4; d.mood = (d.mood || 0) + 3; }
+    }
+    if (tags.includes("danren")) d.sanity = (d.sanity || 0) * 0.7;   // 淡人：波动 -30%
+    if (tags.includes("nongren")) d.sanity = (d.sanity || 0) * 1.5; // 浓人：波动 +50%
+    return d;
+  },
+
+  // 5.1 附加：过劳精神流失（按累计学习时长分档）
+  applyOverworkSanityDrain(dur) {
+    const h = Player.studyHoursToday;
+    let perHour = 0;
+    if (h >= 6 && h < 8) perHour = 1;
+    else if (h >= 8 && h < 10) perHour = 2;
+    else if (h >= 10 && h < 12) perHour = 3;
+    else if (h >= 12) perHour = 4;
+    if (perHour > 0) {
+      Player.stats.sanity = clamp(Player.stats.sanity - Math.round(perHour * dur), 0, 100);
+    }
+  },
+
+  // 执行一个行动 → 更新精力/精神/疲劳/专注/状态；返回 true 表示已跳天（小憩昏睡）
+  applyActionV2(act, duration) {
+    // 小憩次数限制：第 3 次直接昏睡到第二天（隐藏成就）
+    if (act.id === "shuijiao") {
+      Player.napCount = (Player.napCount || 0) + 1;
+      if (Player.napCount >= 3) {
+        this.addLog("😴 <b>又睡了一觉…</b> 这次你直接昏睡到了第二天。");
+        Player.achievements.add("昏睡一天");
+        UI.renderAchievements();
+        toast("🏅 隐藏成就：昏睡一天", "achievement");
+        setTimeout(() => this.endDay(), 800);
+        return true;
+      }
+    }
+    // 聚餐 → 次日宿醉
+    if (act.id === "juhui") Player._hangoverNextDay = true;
+    // 计算精力/精神增量（先过人格修正）
+    const d = {
+      energy: (act.energy != null) ? act.energy : 0,
+      sanity: (act.sanityDelta != null) ? act.sanityDelta : (act.effects.sanity || 0),
+      mood: 0,
+    };
+    this.applySocialPersona(act, d);
+    Player.energy = clamp(Player.energy + Math.round(d.energy), 0, Player.energyMax);
+    Player.stats.sanity = clamp(Player.stats.sanity + Math.round(d.sanity), 0, 100);
+    Player.stats.mood = clamp(Player.stats.mood + Math.round(d.mood || 0), 0, 100);
+    // 社交负荷计数（I/E 彩蛋用）
+    if ((act.socialLoad || "solo") === "solo") Player.todaySolo++;
+    else Player.todaySocial++;
+    // 疲劳 / 专注块
+    const isStudy = act.tag === "学习";
+    if (isStudy) {
+      Player.studyHoursToday += duration;
+      if (Player.restedSinceBlock) { Player.focusBlocks = 1; Player.restedSinceBlock = false; }
+      else Player.focusBlocks++;
+      this.applyOverworkSanityDrain(duration);
+    } else {
+      Player.focusBlocks = 0; Player.restedSinceBlock = true;
+    }
+    this.checkHealthTransition();
+    return false;
+  },
+
+  // 10.2 生病状态机
+  checkHealthTransition() {
+    if (Player.status === "severe") return;
+    if (Player.status === "sick") {
+      if (Player.studyHoursToday >= 8) Player.status = "severe";
+      return;
+    }
+    // 宿醉/通宵：当天学够 2h 自然缓解
+    if ((Player.status === "hangover" || Player.status === "allnighter") && Player.studyHoursToday >= 2) {
+      Player.status = "healthy";
+      return;
+    }
+    // 进入生病：精神见底 / 精力见底 / 过劳累计
+    if (Player.stats.sanity <= 10 || Player.energy <= 0 || Player.studyHoursToday >= 12) {
+      Player.status = "sick";
+      this.addLog("🤒 <b>你病倒了</b> — 效率大跌，建议休息或就医。");
+      toast("🤒 生病了！效率大幅下降", "normal", 2200);
+      return;
+    }
+    // 精神崩溃（未生病时）
+    if (Player.stats.sanity <= 5) Player.status = "breakdown";
+    else if (Player.status === "breakdown" && Player.stats.sanity > 20) Player.status = "healthy";
+  },
+
+  // 刷新精力/精神双条 + 时间轴 + 状态徽章
+  renderV2Status() {
+    const v2 = $("v2Bars");
+    if (v2) {
+      const ePct = Math.round(Player.energy / Player.energyMax * 100);
+      const sPct = Player.stats.sanity;
+      v2.innerHTML = `
+        <div class="v2-bar v2-energy">
+          <span class="v2-bar-label">⚡精力</span>
+          <div class="v2-bar-track"><div class="v2-bar-fill" style="width:${ePct}%"></div></div>
+          <span class="v2-bar-val">${Math.round(Player.energy)}</span>
+        </div>
+        <div class="v2-bar v2-sanity">
+          <span class="v2-bar-label">🧠精神</span>
+          <div class="v2-bar-track"><div class="v2-bar-fill" style="width:${sPct}%"></div></div>
+          <span class="v2-bar-val">${sPct}</span>
+        </div>
+        ${this._statusBadge()}
+      `;
+    }
+    const tl = $("v2Timeline");
+    if (tl) {
+      const total = 23 - 6;
+      const pos = clamp((Player.hour - 6) / total * 100, 0, 100);
+      const studyPct = clamp(Player.studyHoursToday / 12 * 100, 0, 100);
+      const coef = this.fatigueCoef(Player.studyHoursToday, Player.status);
+      tl.innerHTML = `
+        <div class="v2-tl-head"><span>🕐 时间轴</span><span class="v2-tl-coef">效率 ${Math.round(coef * 100)}%</span></div>
+        <div class="v2-tl-track">
+          <div class="v2-tl-study" style="width:${studyPct}%"></div>
+          <div class="v2-tl-now" style="left:${pos}%"></div>
+        </div>
+        <div class="v2-tl-scale"><span>6:00</span><span>12:00</span><span>18:00</span><span>23:00</span></div>
+        <div class="v2-tl-info">今日已学 ${Player.studyHoursToday.toFixed(1)}h · ${this._statusName()}</div>
+      `;
+    }
+  },
+
+  _statusName() {
+    return ({ healthy: "健康", hangover: "🍻宿醉", allnighter: "🕯️通宵", breakdown: "😵精神崩溃", sick: "🤒生病", severe: "🏥重病" })[Player.status] || "健康";
+  },
+
+  _statusBadge() {
+    if (Player.status === "healthy") return "";
+    return `<span class="v2-badge">${this._statusName()}</span>`;
+  },
+
   addLog(msg) {
     const log = $("logBox");
     if (!log) return;
@@ -815,6 +1021,7 @@ const Game = {
         <div class="ap-label">今日体力</div>
         <div class="ap-dots">${dots.join("")}</div>
       `;
+      this.renderV2Status();
     }
 
     const keys = [
@@ -907,10 +1114,15 @@ const Game = {
       const disabled = !apOk || !timeOk;
       const reason = !apOk ? "体力不足" : (!timeOk ? "时间不够" : "");
       const costDots = "⚡".repeat(a.cost);
-      const fx = Object.entries(a.effects).map(([k, v]) => {
+      const fxParts = [];
+      Object.entries(a.effects).forEach(([k, v]) => {
+        if (k === "sanity") return; // 精神改由下方 sanityDelta 显示
         const icon = { study: "📚", mood: "❤️", money: "💰", relation: "🤝", sanity: "🧠" }[k];
-        return `${icon}${v > 0 ? "+" : ""}${v}`;
-      }).join(" ");
+        fxParts.push(`${icon}${v > 0 ? "+" : ""}${v}`);
+      });
+      if (a.energy) fxParts.push(`⚡${a.energy > 0 ? "+" : ""}${a.energy}`);
+      if (a.sanityDelta != null) fxParts.push(`🧠${a.sanityDelta > 0 ? "+" : ""}${a.sanityDelta}`);
+      const fx = fxParts.join(" ");
       return `
         <div class="action-card ${disabled ? "disabled" : ""}" data-action="${a.id}"
              onclick="${disabled ? `Game.hintBlock('${reason}')` : `Game.doAction('${a.id}')`}">
@@ -962,8 +1174,19 @@ const Game = {
     Player.ap -= act.cost;
     Player.hour += duration;
 
-    // 数值
-    const changes = this.applyEffects(act.effects);
+    // v2 数值系统：精力/精神/疲劳/状态（精神由 sanityDelta 负责，故从 act.effects 剔除 sanity 防双重计算）
+    const eff = { ...act.effects };
+    delete eff.sanity;
+    const v2SkipDay = this.applyActionV2(act, duration);
+    if (v2SkipDay) return; // 小憩昏睡已跳天，中断后续逻辑
+    // v2 学习效率折算：疲劳系数 × 精力系数 × 连续专注系数（仅正收益的学习动作）
+    if (eff.study && eff.study > 0) {
+      const coef = this.fatigueCoef(Player.studyHoursToday, Player.status);
+      const energyCoef = 0.5 + 0.5 * Player.energy / Player.energyMax;
+      const focusCoef = Player.focusBlocks >= 4 ? Math.pow(0.9, Player.focusBlocks - 3) : 1;
+      eff.study = Math.round(eff.study * coef * energyCoef * focusCoef);
+    }
+    const changes = this.applyEffects(eff);
 
     const flavor = randPick(act.flavor);
     this.addLog(`${act.icon} <b>${act.name}</b>（${duration}h） — ${flavor}`);
@@ -976,6 +1199,7 @@ const Game = {
 
     // P0: UI局部更新（只更新数值，不重建DOM）
     UI.renderStatsDiff(changes);
+    this.renderV2Status();   // 刷新精力/精神条、时间轴、状态徽章
     this.renderPathPartners();
     this.renderActions();
 
@@ -1051,6 +1275,13 @@ const Game = {
     Player.sleepHours = finalSleep;
     Player.nightAlarm = wakeHour;
 
+    // 宿醉 / 通宵 影响次日（仅健康时叠加）
+    if (Player.status === "healthy") {
+      if (Player._hangoverNextDay) { Player.status = "hangover"; this.addLog("🍻 宿醉未醒，明天状态不佳。"); }
+      else if (now >= 24) { Player.status = "allnighter"; this.addLog("🕯️ 通宵后遗，明天状态不佳。"); }
+    }
+    Player._hangoverNextDay = false;
+
     this.addLog(`🌙 <b>${fmtHour(now > 24 ? now - 24 : now)} 入睡</b>，闹钟设在 ${wakeHour}:00（计划睡 ${finalSleep.toFixed(1)} 小时）`);
 
     UI.hideModal();
@@ -1075,10 +1306,29 @@ const Game = {
   nextDay() {
     if (this.checkBreakdown()) return;
 
+    // —— 上一天结算：I/E 连续彩蛋 + 生病康复 ——
+    const learnedYesterday = Player.studyHoursToday;
+    const pureSolo = Player.todaySolo > 0 && Player.todaySocial === 0;
+    const noSocial = Player.todaySocial === 0;
+    Player.soloStreak = pureSolo ? Player.soloStreak + 1 : 0;
+    Player.socialStreak = noSocial ? Player.socialStreak + 1 : 0;
+    if (Player.lifeTags.includes("iren") && Player.soloStreak >= 3) {
+      this.applyEffects({ study: 5 });
+      this.addLog("🤐 <i>连续独处充电，社恐高效期：复习+5</i>");
+    }
+    if (Player.lifeTags.includes("eren") && Player.socialStreak >= 4) {
+      this.applyEffects({ sanity: 3 });
+      this.addLog("🎤 <i>憋坏了终于出门，精神+3</i>");
+    }
+    if (Player.status === "sick" && learnedYesterday < 3) Player.status = "healthy";
+    else if (Player.status === "severe") Player.status = "sick";
+
     Player.daysPlayed++;
     Player.day++;
     Player.ap = Player.apMax;
     Player._eventTriggeredToday = false;  // P0 修复: 新一天重置事件触发标记
+    Player.studyHoursToday = 0; Player.focusBlocks = 0; Player.restedSinceBlock = true;
+    Player.napCount = 0; Player.todaySolo = 0; Player.todaySocial = 0;
 
     if (Player.day > 30) {
       Player.day = 1;
@@ -1236,6 +1486,17 @@ const Game = {
       monthsPlayed: Math.floor(Player.daysPlayed / 30),
       identity: Player.identity, path: Player.path,
       partners: Player.partners, lifeTags: Player.lifeTags,
+      // v0.7+ 状态字段（修复 cond 函数无法访问这些字段的问题）
+      moyuCount: Player.moyuCount || 0,
+      moyuWarned: Player.moyuWarned || false,
+      moyuPunished: Player.moyuPunished || false,
+      province: Player.province,
+      _isShangan: Player._isShangan,
+      _mockeryNPCs: Player._mockeryNPCs || [],
+      // v2 数值系统字段
+      energy: Player.energy, energyMax: Player.energyMax,
+      status: Player.status, studyHoursToday: Player.studyHoursToday,
+      napCount: Player.napCount,
     };
   },
 
@@ -1246,6 +1507,10 @@ const Game = {
     const candidates = EVENTS.filter(e => {
       if (e.id === "ai_placeholder") return false;
       if (Player.usedEvents.has(e.id)) return false;
+      if (e.timeWindow) {
+        const [start, end] = e.timeWindow;
+        if (Player.hour < start || Player.hour > end) return false;
+      }
       if (e.cond && !e.cond(ctx)) return false;
       return true;
     });
@@ -1429,9 +1694,10 @@ const Game = {
     const prov = PROVINCES.find(p => p.id === pid);
     if (!prov || !prov.easterEggEvent) return false;
 
-    // 节奏：地区彩蛋每 5-8 天最多触发1次
+    // 节奏：地区彩蛋每 5-8 天最多触发1次（修复随机竞态：触发时固定间隔）
     const daysSince = Player.daysPlayed - (Player.lastProvinceEventDay || 0);
-    if (daysSince < 5 + Math.floor(Math.random() * 4)) return false;
+    const interval = Player._provinceEventInterval || 5;
+    if (daysSince < interval) return false;
 
     // 只触发该地区的彩蛋事件
     const event = EVENTS.find(e => e.id === prov.easterEggEvent);
@@ -1440,6 +1706,7 @@ const Game = {
 
     Player.usedEvents.add(event.id);
     Player.lastProvinceEventDay = Player.daysPlayed;
+    Player._provinceEventInterval = 5 + Math.floor(Math.random() * 4); // 下次间隔固定
     this.showEvent(event);
     return true;
   },
@@ -1533,6 +1800,7 @@ const Game = {
     if (mockery.includes("butcher")) this._shanganQueue.push("shangan_butcher_call");
     if (mockery.includes("laowang")) this._shanganQueue.push("shangan_laowang_call");
     if (mockery.includes("biaomei")) this._shanganQueue.push("shangan_biaomei_call");
+    if (mockery.includes("erji")) this._shanganQueue.push("shangan_erji_call");
     // 第三波：家族群发言（嘲讽NPC>=2时触发）
     if (mockery.length >= 2) this._shanganQueue.push("shangan_laoye_qing");
 
@@ -1691,6 +1959,12 @@ const Game = {
     Player._bombardmentDone = false;
     this._shanganQueue = [];
     this._shanganMode = false;
+    // v2 数值系统重置
+    Player.energy = 80; Player.energyMax = 80;
+    Player.studyHoursToday = 0; Player.focusBlocks = 0; Player.restedSinceBlock = true;
+    Player.status = "healthy"; Player.napCount = 0;
+    Player.todaySolo = 0; Player.todaySocial = 0;
+    Player.soloStreak = 0; Player.socialStreak = 0;
     const log = $("logBox");
     if (log) log.innerHTML = "";
     // P0: 清掉旧存档，新开一局不读旧档

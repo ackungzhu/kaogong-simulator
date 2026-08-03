@@ -103,6 +103,7 @@ const ACTIONS = [
     id: "shuati", icon: "📖", name: "刷行测真题",
     desc: "粉笔五年真题",
     cost: 2, duration: 1.5,
+    energy: -25, sanityDelta: -1, socialLoad: "solo",
     effects: { study: 5, mood: -2 },
     flavor: [
       "你又做错了第37题。",
@@ -116,7 +117,8 @@ const ACTIONS = [
     id: "beishen", icon: "📝", name: "背申论模板",
     desc: "《申论100题》第四遍了",
     cost: 2, duration: 1.5,
-    effects: { study: 4, mood: -3, sanity: -1 },
+    energy: -25, sanityDelta: -1, socialLoad: "solo",
+    effects: { study: 4, mood: -3 },
     flavor: [
       "'作为一名公职人员……'",
       "你已经能把第3模块倒背如流。",
@@ -129,6 +131,7 @@ const ACTIONS = [
     id: "wangke", icon: "💻", name: "看网课",
     desc: "2倍速听导师开麦",
     cost: 2, duration: 1,
+    energy: -15, sanityDelta: 0, socialLoad: "solo",
     effects: { study: 3, mood: 2 },
     flavor: [
       "老师：'同学们！这道题太简单了！'",
@@ -142,7 +145,8 @@ const ACTIONS = [
     id: "moukao", icon: "📊", name: "模考自测",
     desc: "粉笔周赛冲一把",
     cost: 3, duration: 3,
-    effects: { study: 7, mood: -5, sanity: -3 },
+    energy: -40, sanityDelta: -4, socialLoad: "solo",
+    effects: { study: 7, mood: -5 },
     flavor: [
       "行测 48.6。平均 62。你的排名是后 30%。",
       "模考结束后你才发现涂错了答题卡。",
@@ -155,6 +159,7 @@ const ACTIONS = [
     id: "moyu", icon: "🐟", name: "摸鱼",
     desc: "刷抖音/B站/小红书",
     cost: 1, duration: 1,
+    energy: 15, sanityDelta: 3, socialLoad: "solo",
     effects: { mood: 8, sanity: 3, study: -1 },
     flavor: [
       "你开了'上岸模拟器'，玩了一局。",
@@ -168,6 +173,7 @@ const ACTIONS = [
     id: "yundong", icon: "🏃", name: "去跑步",
     desc: "绕操场跑3圈",
     cost: 2, duration: 1,
+    energy: 10, sanityDelta: 6, socialLoad: "solo",
     effects: { mood: 10, sanity: 5, study: -2 },
     flavor: [
       "第二圈你就想回家了。",
@@ -182,6 +188,7 @@ const ACTIONS = [
     id: "chifan_solo", icon: "🍱", name: "独自吃饭",
     desc: "外卖/食堂随便扒两口",
     cost: 1, duration: 0.5,
+    energy: 12, sanityDelta: 2, socialLoad: "solo",
     effects: { mood: 4, money: -2, sanity: 1 },
     flavor: [
       "外卖小哥说：'加油！' 你愣了一下，说：'谢谢。'",
@@ -195,6 +202,7 @@ const ACTIONS = [
     id: "chifan_friend", icon: "🍜", name: "和朋友吃饭",
     desc: "喊一个研友/同学",
     cost: 1, duration: 1,
+    energy: 10, sanityDelta: 4, socialLoad: "light",
     effects: { mood: 8, money: -5, relation: 5, sanity: 2 },
     flavor: [
       "他/她也在抱怨备考。你们成了精神同盟。",
@@ -208,6 +216,7 @@ const ACTIONS = [
     id: "juhui", icon: "🍻", name: "出去聚餐",
     desc: "好几个朋友一起吃",
     cost: 2, duration: [3, 5],   // 随机 3-5 小时
+    energy: 5, sanityDelta: 6, socialLoad: "heavy",
     effects: { mood: 12, money: -15, relation: 10, study: -3, sanity: -3 },
     flavor: [
       "酒过三巡，老王哭着说他要二战。",
@@ -221,6 +230,7 @@ const ACTIONS = [
     id: "chuqu_wan", icon: "🎢", name: "出去玩",
     desc: "环球影城/迪士尼/演唱会",
     cost: 3, duration: [6, 10],  // 占用一整天
+    energy: -10, sanityDelta: 10, socialLoad: "heavy",
     effects: { mood: 25, money: -40, relation: 5, study: -8, sanity: 8 },
     flavor: [
       "你在游乐园里跑得像个10岁小孩。",
@@ -234,6 +244,7 @@ const ACTIONS = [
     id: "shuijiao", icon: "😴", name: "白天小憩",
     desc: "午睡30分钟",
     cost: 0, duration: 0.5,
+    energy: 30, sanityDelta: 5, socialLoad: "solo",
     effects: { sanity: 8, mood: 3 },
     flavor: [
       "你梦见自己上岸了。醒来时哭了 1 分钟。",
@@ -260,6 +271,7 @@ const ACTIONS = [
     id: "jianzhi", icon: "💰", name: "接兼职",
     desc: "发传单/陪诊/写文稿",
     cost: 3, duration: 4,
+    energy: -20, sanityDelta: -3, socialLoad: "light",
     effects: { money: 10, study: -5, mood: -5, sanity: -3 },
     flavor: [
       "站了 6 小时腿都肿了。赚了 120 块。",
@@ -273,6 +285,7 @@ const ACTIONS = [
     id: "xiangqin", icon: "💘", name: "相亲",
     desc: "妈安排的相亲对象",
     cost: 2, duration: 2,
+    energy: -5, sanityDelta: 0, socialLoad: "heavy",
     effects: { relation: 5, mood: -8, money: -5, sanity: -5 },
     flavor: [
       "对方说：'你今年能上岸吗？'",
@@ -286,6 +299,7 @@ const ACTIONS = [
     id: "ziyou", icon: "🧘", name: "冥想",
     desc: "坐着发呆也行",
     cost: 1, duration: 0.5,
+    energy: 20, sanityDelta: 8, socialLoad: "solo",
     effects: { sanity: 8, mood: 3 },
     flavor: [
       "你坐了 20 分钟，想了 3 次自己考不上怎么办。",
@@ -301,11 +315,11 @@ const ACTIONS = [
 // 玩家在每天开始时选择何时起床
 const WAKE_OPTIONS = [
   { id: "early", time: 6, label: "🌅 6:00 早起", desc: "晨型人战士",
-    energyDelta: 2, hint: "连续早起+精力。但若昨夜睡眠不足则反而消耗精神" },
+    energyDelta: 8, hint: "连续早起+8精力。但若昨夜睡眠不足则反而消耗精神" },
   { id: "normal", time: 8, label: "☀️ 8:00 正常起", desc: "上班族节奏",
     energyDelta: 0, hint: "标准模式，无特殊加成" },
   { id: "lazy", time: 10, label: "🛌 10:00 赖床", desc: "今天就摆烂吧",
-    energyDelta: -1, hint: "晚起精力轻微下降，但心态+3" },
+    energyDelta: -5, hint: "晚起精力-5，但心态+3" },
 ];
 
 
@@ -645,7 +659,7 @@ const EVENTS = [
   },
 
   {
-    id: "juhui",
+    id: "event_juhui",
     title: "五一同学聚会",
     weight: 1,
     cond: (p) => p.month >= 3 && p.month <= 7,
@@ -3073,6 +3087,39 @@ HR 递过来一份文件。
     ]
   },
 
+  {
+    id: "shangan_erji_call",
+    title: "二姑上门",
+    rarity: "rare",
+    rarityWeight: 1.0,
+    cond: (p) => p._isShangan && p._bombardmentDone && (p._mockeryNPCs || []).includes("erji"),
+    desc: `门铃响了。你打开门——
+
+二姑提着两箱特仑苏站在门口，笑得满脸褶子：
+
+<em>"哎呀！XX啊！二姑早就说你从小就跟别的孩子不一样！"</em>
+<em>"之前那个……那不是激将法嘛！二姑都是为了你好！"</em>
+<em>"对了，你表妹今年也备考呢，你有空给她辅导辅导？"</em>
+
+——你想起了半年前家族聚会上：
+
+<em>"你那个985的怎么还没考上？表妹大专都进税务局了。"</em>
+<em>"有些人啊，就是心比天高命比纸薄。"</em>
+
+现在她把特仑苏塞进你手里，说"一家人不说两家话"。`,
+    choices: [
+      { label: "A", text: '"谢谢二姑。"（收下牛奶，不计较）',
+        effects: { relation: 12, mood: 8 },
+        achievement: "以德报怨" },
+      { label: "B", text: '"二姑，您之前说我是心比天高命比纸薄？"',
+        effects: { mood: 20, relation: -10 },
+        achievement: "翻旧账" },
+      { label: "C", text: '"牛奶我收了，辅导就免了。"（拿东西但不给面子）',
+        effects: { sanity: 5, relation: -5 },
+        achievement: "礼貌敷衍" }
+    ]
+  },
+
   // ---- 上岸后第三波：家族群发言·老爷请 ----
   {
     id: "shangan_laoye_qing",
@@ -3109,10 +3156,506 @@ HR 递过来一份文件。
         achievement: "事了拂衣去" }
     ]
   },
+
+  // ===== 热梗2.0 新增事件 =====
+
+  // T0-1: 赛博上坟
+  {
+    id: "saibo_shangfen",
+    title: "赛博上坟",
+    rarity: "common",
+    rarityWeight: 8,
+    cond: (p) => p.sanity < 50,
+    desc: `你说好学习，打开手机"就看5分钟"。
+
+2小时后——
+
+你刷了47条短视频，收藏了12条"考公必背"，一条没看。
+你打开小红书，搜了"考公还有必要坚持吗"。
+你打开微博，搜了"2026国考上岸率"。
+
+这就是赛博上坟——说好学习，却给时间办了葬礼。`,
+    choices: [
+      { label: "A", text: "继续刷……（已经摆烂了）",
+        effects: { sanity: -5, mood: -3, study: -2 } },
+      { label: "B", text: "卸载抖音小红书（破釜沉舟）",
+        effects: { sanity: 3, mood: -5 }, achievement: "赛博上坟" },
+      { label: "C", text: "设屏幕时间限制（理性派）",
+        effects: { sanity: 1, mood: 1, study: 1 } },
+      { label: "D", text: "水灵灵地又过了一天什么都没学",
+        effects: { sanity: -2, mood: -1 } }
+    ]
+  },
+
+  // T0-2: 妈妈的电话·外耗版
+  {
+    id: "mama_waihao",
+    title: "妈妈的电话·外耗版",
+    rarity: "rare",
+    rarityWeight: 5,
+    cond: (p) => p.month >= 2 && !p._isShangan,
+    desc: `晚上11点，妈妈打来电话：
+
+"隔壁王阿姨家孩子考上市局了，给了20万彩礼。"
+"你看看人家，再看看你。"
+"我跟你爸都多大年纪了，你什么时候上岸？"
+
+——这次，你不想忍了。`,
+    choices: [
+      { label: "A", text: '"王阿姨家孩子去年还二战呢！"（外耗回去）',
+        effects: { relation: -15, mood: 15 }, achievement: "外耗大师" },
+      { label: "B", text: '"妈我在努力"（传统选项）',
+        effects: { mood: -5, relation: 3 } },
+      { label: "C", text: '"妈你别说了我这就去学习"（已老实求放过）',
+        effects: { mood: -10, study: 5 } },
+      { label: "D", text: '"妈你觉得我能上岸吗不能的话我去送外卖了"（淡淡地疯了，需精神<30）',
+        effects: { mood: 0, sanity: -3 },
+        cond: (p) => p.sanity < 30 }
+    ]
+  },
+
+  // T0-3: 面霸诅咒
+  {
+    id: "mianba_zuzhou",
+    title: "进面通知·面霸诅咒",
+    rarity: "epic",
+    rarityWeight: 2,
+    cond: (p) => p._jinmianCount >= 3,
+    desc: `你的笔试成绩出来了！排名第三……你**进面**了！
+
+这是你**第${0}次进面**了。
+
+系统提示：检测到你触发了 **「总吃面却不上岸」** 状态 🍜
+
+上一次面试，你差0.3分。
+上上次面试，你紧张到忘词。
+上上上次面试，考官问你为什么考公，你说"因为稳定"。`,
+    choices: [
+      { label: "A", text: '"这次不一样！"（自信满满报面试班）',
+        effects: { money: -8, mood: 10, study: 3 } },
+      { label: "B", text: '"别太荒谬，又是第三名"（开始研究笔面比玄学）',
+        effects: { mood: -10 }, achievement: "面霸诅咒" },
+      { label: "C", text: '"质疑范进、理解范进、超越范进！"（自我激励）',
+        effects: { mood: 5, sanity: -3 } },
+      { label: "D", text: '"蒜鸟蒜鸟，随便面一下吧"（佛系）',
+        effects: { mood: 0 } }
+    ]
+  },
+
+  // T0-4: 深夜图书馆的邪修
+  {
+    id: "yexie_xieaxiu",
+    title: "深夜图书馆的邪修",
+    rarity: "rare",
+    rarityWeight: 4,
+    cond: (p) => p.hour >= 20,
+    desc: `晚上，图书馆闭馆音乐响了。
+你今天的计划是做完一套行测真题。
+
+但你发现对面坐了一个大哥，他——
+一边泡脚（用图书馆的饮水机热水）一边听申论网课2倍速。
+
+他看见你盯着他，冲你竖了个大拇指。`,
+    choices: [
+      { label: "A", text: "邪修入门：学他泡脚听网课（松弛感拉满）",
+        effects: { study: 3, mood: 5, sanity: 3 }, achievement: "邪修入门" },
+      { label: "B", text: "正常人：埋头刷题头都不抬",
+        effects: { study: 5, mood: -2 } },
+      { label: "C", text: "赛博上坟：书摊开着，手机刷了2小时",
+        effects: { mood: -5, money: -2, study: -2 } },
+      { label: "D", text: "蒜鸟蒜鸟，明天再说",
+        effects: { mood: 3, study: -2 } }
+    ]
+  },
+
+  // T0-5: 闲鱼淘资料
+  {
+    id: "xianyu_ziliao",
+    title: "闲鱼淘资料",
+    rarity: "common",
+    rarityWeight: 7,
+    cond: (p) => p.money < 40,
+    desc: `你在闲鱼搜"考公资料"：
+
+9.9元 2026粉笔系统班（卖家说已上岸，包邮）
+5元 申论100题（有笔记，卖家说"祝你上岸"）
+1元 行测真题PDF（电子版，秒发）
+
+还有一个卖家写着："19800协议班全套资料，上岸了用不上，低价出。"`,
+    choices: [
+      { label: "A", text: "9.9买粉笔系统班（卖家已上岸，沾喜气）",
+        effects: { money: -10, study: 8, mood: 2 } },
+      { label: "B", text: "5块买申论100题（有笔记更香）",
+        effects: { money: -5, study: 5 } },
+      { label: "C", text: "1块买PDF（白嫖怪）",
+        effects: { money: -1, study: 2 } },
+      { label: "D", text: "不买，白嫖B站免费课",
+        effects: { study: 1, mood: -1 } }
+    ]
+  },
+
+  // T0-6: AI代写的诱惑
+  {
+    id: "ai_daixie",
+    title: "AI代写的诱惑",
+    rarity: "rare",
+    rarityWeight: 4,
+    cond: (p) => p.month >= 6,
+    desc: `你打开ChatGPT：
+
+"帮我写一篇申论范文，主题是基层治理。"
+
+3秒后，AI输出了一篇800字范文。
+文采斐然，逻辑清晰，引用了3个政策文件。
+
+你想：这要是考场上有AI……`,
+    choices: [
+      { label: "A", text: "背下来当模板（万一考场上想起来了呢）",
+        effects: { study: 5, sanity: -2 } },
+      { label: "B", text: "只用AI改写自己的文章（取其精华）",
+        effects: { study: 3 } },
+      { label: "C", text: "不用AI，自己写（正统派）",
+        effects: { study: 2, mood: 2 } },
+      { label: "D", text: "让AI帮我制定复习计划（邪修路线）",
+        effects: { study: 4, sanity: -1 }, achievement: "邪修入门" }
+    ]
+  },
+
+  // T0-7: 赛博祈福
+  {
+    id: "saibo_qifu",
+    title: "赛博祈福",
+    rarity: "common",
+    rarityWeight: 6,
+    cond: (p) => p.month === 3 || p.month === 10 || p.month === 11,
+    desc: `考前一周，你开始迷信了：
+
+朋友圈全是锦鲤、孔子、文曲星。
+你妈让你去庙里烧香。
+你的研友换了『逢考必过』头像。
+
+你也犹豫了——信不信？`,
+    choices: [
+      { label: "A", text: "换锦鲤头像（图个吉利）",
+        effects: { mood: 5 } },
+      { label: "B", text: "转发『逢考必过』到3个群",
+        effects: { mood: 3, relation: -3 } },
+      { label: "C", text: "去庙里拜孔子（心诚则灵）",
+        effects: { sanity: 5, money: -2 } },
+      { label: "D", text: "不信邪，复习去",
+        effects: { study: 3, mood: -2 } }
+    ]
+  },
+
+  // T0-8: 朋友圈两种人生
+  {
+    id: "pengyouang_liangzhong",
+    title: "朋友圈两种人生",
+    rarity: "rare",
+    rarityWeight: 5,
+    cond: (p) => p.relation > 50,
+    desc: `你打开朋友圈：
+
+第一条：大学室友晒字节工牌，"Day 1 at ByteDance 🚀"
+第二条：高中同学晒公务员录用公示，"感谢组织信任"
+第三条：你——晒的是粉笔模考成绩单，48.6分。
+
+别人的生活是诗和远方，
+我的生活是行测和申论。`,
+    choices: [
+      { label: "A", text: "关掉朋友圈（眼不见为净）",
+        effects: { mood: 3, relation: -5 } },
+      { label: "B", text: "给字节室友点个赞（大度）",
+        effects: { mood: -5, relation: 3 } },
+      { label: "C", text: "发条备考日常（主打一个真实）",
+        effects: { relation: 5, mood: -2 } },
+      { label: "D", text: '"我卷故我在"——继续刷题',
+        effects: { study: 4, mood: -3 } }
+    ]
+  },
+
+  // T1-9: 体检·痔疮文学
+  {
+    id: "tijian_zhichuang",
+    title: "体检·痔疮文学",
+    rarity: "rare",
+    rarityWeight: 3,
+    cond: (p) => p._jinmianCount >= 1,
+    desc: `进面后第一关：体检。
+
+你看到体检表上有一项：肛肠科检查。
+
+你突然想起考公群里有人说：
+"体检因为痔疮被刷的，是不是真的？"
+"身上有纹身会不会被卡？"
+"近视800度能报狱警吗？"
+
+你开始焦虑自己身上的每一个零件。`,
+    choices: [
+      { label: "A", text: "提前去医院检查（花钱买安心）",
+        effects: { money: -5, sanity: 5, study: -3 } },
+      { label: "B", text: "不管了，听天由命",
+        effects: { sanity: -3 } },
+      { label: "C", text: "上网搜『公务员体检被刷』（越搜越慌）",
+        effects: { sanity: -8, mood: -5 } }
+    ]
+  },
+
+  // T1-10: 暧昧研友的表白
+  {
+    id: "yanyou_biaobai",
+    title: "暧昧研友的表白",
+    rarity: "epic",
+    rarityWeight: 2,
+    cond: (p) => p.partners && p.partners.includes("study_partner") && p.relation > 60,
+    desc: `研友突然发来一条微信：
+
+"其实我一直想跟你说……"
+"如果你上岸了，我们能不能……"
+"算了，你现在备考最重要。考完再说。"
+
+你看着这条消息，心跳漏了一拍。
+考公和恋爱，能不能兼得？`,
+    choices: [
+      { label: "A", text: '"我也喜欢你，一起上岸！"（接受）',
+        effects: { relation: 20, mood: 10, study: -5 } },
+      { label: "B", text: '"考完再说吧"（推迟）',
+        effects: { mood: 5, relation: 5 } },
+      { label: "C", text: '"我现在只想学习"（拒绝）',
+        effects: { mood: -10, relation: -10, study: 5 } }
+    ]
+  },
+
+  // T1-11: 下雨天的自习室
+  {
+    id: "xiayu_zixishi",
+    title: "下雨天的自习室",
+    rarity: "common",
+    rarityWeight: 7,
+    cond: () => Math.random() < 0.3,
+    desc: `今天下雨了。
+
+自习室里只有3个人。
+暖气坏了，空调也坏了。
+窗外的雨声很大，像在替你焦虑。
+
+但奇怪的是，这种天气你反而能静下心来。`,
+    choices: [
+      { label: "A", text: "坚持自习（雨天效率反而高）",
+        effects: { study: 5, sanity: 3 } },
+      { label: "B", text: "回家学（舒服一点）",
+        effects: { study: 1 } },
+      { label: "C", text: "回家睡觉（摆烂一天）",
+        effects: { sanity: 8, study: -3, mood: 2 } }
+    ]
+  },
+
+  // T1-12: 图书馆显眼包
+  {
+    id: "tushuguan_xianyanbao",
+    title: "图书馆显眼包",
+    rarity: "common",
+    rarityWeight: 6,
+    desc: `图书馆来了个显眼包：
+
+他外放音乐背单词，声音大到三层楼都能听见。
+他每背完一个词就拍桌子说"记住！"。
+他带了火锅底料在自习室泡面。
+
+整个自习室的人都在看他，但他浑然不觉。`,
+    choices: [
+      { label: "A", text: "换位置（惹不起躲得起）",
+        effects: { mood: -2, sanity: -1 } },
+      { label: "B", text: "跟他比谁声音大（以毒攻毒）",
+        effects: { mood: 5, sanity: -3, relation: -3 } },
+      { label: "C", text: "向管理员举报（正义执行）",
+        effects: { relation: -5, mood: 2 } }
+    ]
+  },
+
+  // T1-13: 报班的诱惑·预制梦想
+  {
+    id: "baoban_yuhuo",
+    title: "报班的诱惑",
+    rarity: "rare",
+    rarityWeight: 4,
+    cond: (p) => p.month >= 3 && p.month <= 5,
+    desc: `中公发来传单：
+
+"2026省考协议班，19800元，不过退15000！"
+"粉笔系统班，3680元，名师护航！"
+"小机构冲刺班，980元，包住宿！"
+
+中公的销售说："报了就是上岸的第一步。"
+你心想：这不就是预制梦想吗？批量生产，缺乏灵魂。`,
+    choices: [
+      { label: "A", text: "刷信用卡报协议班（预制梦想）",
+        effects: { money: -20, study: 20, mood: 5 }, achievement: "大冤种" },
+      { label: "B", text: "买二手网课（性价比之王）",
+        effects: { money: -2, study: 10, mood: -2 } },
+      { label: "C", text: "加入免费公考群白嫖",
+        effects: { study: 3 } }
+    ]
+  },
+
+  // T1-14: 凌晨刷题机（宝妈专属）
+  {
+    id: "lingchen_shuati",
+    title: "凌晨刷题机",
+    rarity: "rare",
+    rarityWeight: 3,
+    cond: (p) => p.identity === "baoma" && p.hour >= 23,
+    desc: `凌晨，孩子终于睡熟了。
+
+你打开台灯，翻开错题本。
+这是你一天中唯一属于自己的时间。
+
+你妈说："别熬了，身体要紧。"
+但你知道，只有这个时候没人打扰你。`,
+    choices: [
+      { label: "A", text: "继续刷题（凌晨的战斗力）",
+        effects: { study: 5, sanity: -5 }, achievement: "凌晨刷题机" },
+      { label: "B", text: "睡吧，明天再来",
+        effects: { sanity: 10 } }
+    ]
+  },
+
+  // T1-15: 工位坐禅（在职编外专属）
+  {
+    id: "gongwei_zuochan",
+    title: "工位坐禅",
+    rarity: "rare",
+    rarityWeight: 3,
+    cond: (p) => p.identity === "bianzhi",
+    desc: `下午2点，领导在开一个漫长的会。
+
+你坐在角落，眼睛盯着PPT，手在桌子下面翻着申论小册子。
+同事以为你在认真记笔记。
+
+其实你在背"作为一名公职人员……"
+这就是工位坐禅——表面上班，实则备考。`,
+    choices: [
+      { label: "A", text: "继续开会背申论（一心二用）",
+        effects: { study: 3 }, achievement: "工位坐禅" },
+      { label: "B", text: "专心开会（打工人本职）",
+        effects: { study: 0, mood: 1 } },
+      { label: "C", text: "借口上厕所刷题",
+        effects: { study: 2, sanity: -1 }, achievement: "厕所战神" }
+    ]
+  },
+
+  // ===== 时间触发型事件（新机制）=====
+
+  // 时间触发-1: 早起的鸟儿
+  {
+    id: "time_zaogi_niaoer",
+    title: "早起的鸟儿",
+    rarity: "common",
+    rarityWeight: 5,
+    timeWindow: [6, 8],
+    cond: (p) => p.hour >= 6 && p.hour <= 8,
+    desc: `你${p_hour < 7 ? "6点多" : "7点多"}就出门了。
+
+小区里一个晨练的老大爷看见你，问：
+"小伙子/姑娘，这么早出门啊？"
+"考公？我孙子也在考！"
+"加油啊！考上好！稳定！"
+
+你礼貌地笑笑，心想：大爷您孙子报的什么岗？`,
+    choices: [
+      { label: "A", text: '"谢谢大爷！"（礼貌回应）',
+        effects: { mood: 3, relation: 2 } },
+      { label: "B", text: '"大爷您孙子考哪儿的？"（攀比情报）',
+        effects: { relation: 3 } },
+      { label: "C", text: "戴上耳机快步走（社恐模式）",
+        effects: { sanity: 1 } }
+    ]
+  },
+
+  // 时间触发-2: 午休食堂
+  {
+    id: "time_wuxiu_shitang",
+    title: "午休食堂",
+    rarity: "common",
+    rarityWeight: 5,
+    timeWindow: [11, 13],
+    cond: (p) => p.hour >= 11 && p.hour <= 13,
+    desc: `中午，你来到食堂/便利店。
+
+食堂阿姨看见你，多舀了一勺红烧肉：
+"年轻人要多吃点，脑力劳动辛苦！"
+
+你端着餐盘找位置，看到角落有个也在看书的人——
+TA面前摊着一本《行测5000题》。`,
+    choices: [
+      { label: "A", text: "过去搭话（偶遇研友）",
+        effects: { relation: 5, mood: 3 } },
+      { label: "B", text: "自己吃，边吃边背单词",
+        effects: { study: 2, sanity: 1 } },
+      { label: "C", text: "吃完回去午睡",
+        effects: { sanity: 3 } }
+    ]
+  },
+
+  // 时间触发-3: 深夜emo
+  {
+    id: "time_shenye_emo",
+    title: "深夜emo",
+    rarity: "rare",
+    rarityWeight: 3,
+    timeWindow: [22, 24],
+    cond: (p) => p.hour >= 22,
+    desc: `晚上${Math.floor(p_hour)}点，你躺在床上刷手机。
+
+朋友圈里：
+同学A晒了字节offer
+同学B晒了公务员录用公示
+同学C晒了结婚证
+同学D晒了娃
+
+你看了看自己的朋友圈——上一条还是3个月前发的模考成绩。
+
+"我什么时候才能上岸啊……"`,
+    choices: [
+      { label: "A", text: "关掉手机，睡觉（明天还要早起）",
+        effects: { sanity: 3 } },
+      { label: "B", text: "继续刷（越刷越emo）",
+        effects: { sanity: -5, mood: -5 } },
+      { label: "C", text: "发条朋友圈感慨一下",
+        effects: { relation: 3, mood: -2 } }
+    ]
+  },
+
+  // 时间触发-4: 凌晨失眠
+  {
+    id: "time_lingchen_shimian",
+    title: "凌晨失眠",
+    rarity: "epic",
+    rarityWeight: 1,
+    timeWindow: [1, 5],
+    cond: (p) => p.hour >= 1 && p.hour <= 5,
+    desc: `凌晨，你醒了。
+
+脑子里全是行测数量关系的那道鸡兔同笼。
+你闭上眼，申论模板在脑子里自动播放。
+你睁开眼，盯着天花板。
+
+睡也睡不着，起也起不来。
+要不要起来刷两道题？`,
+    choices: [
+      { label: "A", text: "起来刷题（既然醒了）",
+        effects: { study: 3, sanity: -8 }, achievement: "越夜越清醒" },
+      { label: "B", text: "数羊（努力入睡）",
+        effects: { sanity: -3 } },
+      { label: "C", text: "听申论ASMR助眠（邪修路线）",
+        effects: { sanity: 2, study: 1 }, achievement: "邪修入门" }
+    ]
+  },
 ];
 
 // ========== 成就库 ==========
 const ACHIEVEMENTS = {
+  "昏睡一天": { desc: "小憩第 3 次，你直接昏睡到了第二天。" },
   "癞蛤蟆想吃天鹅肉": { desc: "《儒林外史》范进同款：你爸/丈人都说过这句话。" },
   "尖嘴猴腮": { desc: "'你这尖嘴猴腮，也该撒泡尿自己照照！'" },
   "我避他锋芒？": { desc: "勇士的自我安慰——你报了三不限，全员绞肉机。" },
@@ -3258,6 +3801,8 @@ const ACHIEVEMENTS = {
   "事了拂衣去": { desc: "已读不回，默默退出群聊。深藏功与名。" },
   "正统学徒": { desc: "粉笔+中公+华图，传统考公路线。" },
   "邪修入门": { desc: "你选择了一条不走寻常路的备考方式。" },
+  "赛博上坟": { desc: "说好学习，却给时间办了葬礼。" },
+  "面霸诅咒": { desc: "次次进面，次次被刷——总吃面却不上岸。" },
   "邪修出关": { desc: "食堂大妈都成了你的言语理解陪练。" },
   "邪修大师": { desc: "再来一碗！你发现大妈在夸你饭量好。" },
   "战略性放弃": { desc: "24 个字记住 12 个就够了，剩下的蒙。" },
