@@ -5,48 +5,89 @@
 * v0.4基线：人生标签 + 24h时间制 + 起床/赖床/熬夜系统
 */
 
-// ========== 人生标签库（开局多选）==========
-// 每个标签影响初始数值、触发偏好、特殊事件解锁
+// ========== 人生标签库（开局多选 · v0.9 重构）==========
+// 排他组：同组内只能选1个（exclusiveGroup 字段）
+// 分类排列：按类别分组展示
+// 彩蛋：特殊条件触发隐藏效果（easterEgg 字段）
 const LIFE_TAGS = [
-  { id: "foxi", emoji: "🍃", name: "佛系", desc: "不争不抢，顺其自然",
-    delta: { mood: 8, sanity: 8, study: -5 },
-    perk: "面对失败心态-50%惩罚，但学习效率-10%" },
-  { id: "45du", emoji: "📐", name: "45度青年", desc: "不躺不卷，维持最低限度努力",
-    delta: { study: 3, mood: 5 },
-    perk: "刷题学习收益+10%，但无法触发'肝帝'结局" },
+  // ── 第1排：性格倾向（排他组A：I人 / E人 / 淡人 / 浓人）──
   { id: "iren", emoji: "🤐", name: "I人", desc: "MBTI内向型社交者",
     delta: { sanity: 5, relation: -8 },
-    perk: "社交事件消耗精神+5，但独处事件加成+30%" },
-  { id: "eren", emoji: "🎤", name: "E人", desc: "MBTI外向型社交者",
-    delta: { relation: 10, mood: 5, study: -3 },
-    perk: "社交事件加成+30%，但难抵御诱惑（朋友约总要去）" },
+    perk: "社交事件消耗精神+5，但独处事件加成+30%",
+    exclusiveGroup: "personality", category: "性格" },
+  { id: "eren", emoji: "🎤", name: "E人", desc: "MBTI外向型社交者（含原显眼包能力）",
+    delta: { relation: 15, mood: 10, study: -3 },
+    perk: "社交事件加成+30%+拍照分享类隐藏事件，但难抵御诱惑",
+    exclusiveGroup: "personality", category: "性格" },
+  { id: "danren", emoji: "💧", name: "淡人", desc: "情绪浓度低，波澜不惊",
+    delta: { sanity: 12, mood: -3 },
+    perk: "心态/精神波动幅度-30%（更稳）",
+    exclusiveGroup: "personality", category: "性格" },
+  { id: "nongren", emoji: "🔥", name: "浓人", desc: "情绪浓度高，爱恨分明",
+    delta: { mood: 8, sanity: -8 },
+    perk: "情绪事件波动+50%，触发范进体系概率+30%",
+    exclusiveGroup: "personality", category: "性格" },
+
+  // ── 第2排：奋斗姿态（排他组B：卷王 / 45度 / 佛系）──
+  { id: "juanwang", emoji: "💪", name: "卷王", desc: "宁可卷死自己，也要卷赢别人",
+    delta: { study: 15, mood: -8, sanity: -5 },
+    perk: "刷题/模考效率+30%，但每日体力消耗+1，精神归零风险+50%",
+    exclusiveGroup: "effort", category: "奋斗" },
+  { id: "45du", emoji: "📐", name: "45度青年", desc: "不躺不卷，维持最低限度努力",
+    delta: { study: 3, mood: 5 },
+    perk: "刷题学习收益+10%，但无法触发'肝帝'结局",
+    exclusiveGroup: "effort", category: "奋斗" },
+  { id: "foxi", emoji: "🍃", name: "佛系", desc: "不争不抢，顺其自然",
+    delta: { mood: 8, sanity: 8, study: -5 },
+    perk: "面对失败心态-50%惩罚，但学习效率-10%",
+    exclusiveGroup: "effort", category: "奋斗" },
+
+  // ── 第3排：出身背景（排他组C：小镇做题家 / 天之骄子）──
   { id: "xiaozhen", emoji: "🎯", name: "小镇做题家", desc: "靠考试改变命运，但天花板明显",
     delta: { study: 12, sanity: -5, mood: -3 },
-    perk: "刷题/模考效率+20%，但'相亲'/'同学聚会'事件心态-50%" },
-  { id: "fafeng", emoji: "🤪", name: "发疯文学", desc: "用夸张表达释放情绪",
-    delta: { mood: 10, sanity: -5 },
-    perk: "解锁特殊'淡淡地疯了'选项，崩溃边缘有20%概率反弹" },
-  { id: "dagongren", emoji: "👔", name: "打工人/社畜", desc: "上班族的自我调侃",
-    delta: { money: 8, sanity: -5, mood: -3 },
-    perk: "兼职收益+30%，但每月强制扣班味debuff（除非裸辞）" },
-  { id: "niuma", emoji: "🐂", name: "牛马", desc: "感觉自己被压榨、疲于奔命",
-    delta: { money: 10, mood: -10, sanity: -8 },
-    perk: "兼职收益+50%，但每日体力上限-1" },
+    perk: "刷题/模考效率+20%，但'相亲'/'同学聚会'事件心态-50%",
+    exclusiveGroup: "background", category: "出身",
+    easterEgg: { trigger: "province:beijing", action: "show_conflict", conflictWith: "tianzijiao" } },
+  { id: "tianzijiao", emoji: "👑", name: "天之骄子", desc: "北京爷们儿，就是内个地~道~",
+    delta: { mood: 10, relation: 8, money: 5 },
+    perk: "初始心态+10，北京地区默认勾选；取消则触发'臭外地的'彩蛋",
+    exclusiveGroup: "background", category: "出身",
+    easterEgg: {
+      trigger: "province:beijing",
+      autoSelect: true,  // 北京地区默认勾选
+      onDeselect: {
+        type: "screen_glitch",
+        effect: "screen_red_flash + ERROR404",
+        message: "呦，原来是臭外地的~来北京要F来了......",
+        recovery: "刚才系统错误，请您继续选择",
+        achievement: "臭外地的"
+      }
+    } },
+
+  // ── 第4排：经济状态（排他组D：精致穷 / 新穷人 / 社畜 / 牛马）──
   { id: "jingzhiqiong", emoji: "💸", name: "精致穷", desc: "花钱讲品质，但其实没什么钱",
     delta: { money: -10, mood: 8 },
-    perk: "'好好吃饭'心态加成翻倍，但消费-50%（更费钱）" },
-  { id: "xianyanbao", emoji: "🌟", name: "显眼包", desc: "爱表现、社交活跃",
-    delta: { relation: 15, mood: 10, study: -3 },
-    perk: "解锁'拍照分享'类隐藏事件，社交事件关系收益翻倍" },
-  { id: "danren", emoji: "💧", name: "淡人", desc: "情绪浓度低",
-    delta: { sanity: 12, mood: -3 },
-    perk: "心态/精神波动幅度-30%（更稳）" },
-  { id: "nongren", emoji: "🔥", name: "浓人", desc: "情绪浓度高",
-    delta: { mood: 8, sanity: -8 },
-    perk: "情绪事件波动+50%，触发范进体系概率+30%" },
+    perk: "'好好吃饭'心态加成翻倍，但消费-50%（更费钱）",
+    exclusiveGroup: "economy", category: "经济" },
   { id: "xinqiong", emoji: "🪙", name: "新穷人", desc: "收入不低但存不下钱、没有安全感",
     delta: { money: 5, sanity: -8, mood: -5 },
-    perk: "钱包归零延迟（多撑5天），但每月生活费消耗+30%" },
+    perk: "钱包归零延迟（多撑5天），但每月生活费消耗+30%",
+    exclusiveGroup: "economy", category: "经济" },
+  { id: "shechu", emoji: "🏢", name: "社畜", desc: "正职上班族，骑驴找马考公",
+    delta: { money: 15, sanity: -8, mood: -5, study: -3 },
+    perk: "正职收益（兼职收益×2），但每月强制扣班味debuff",
+    exclusiveGroup: "economy", category: "经济",
+    visibilityCond: (p) => p.identity === "bianzhi",  // 仅在职编外可选
+    easterEgg: { trigger: "identity:bianzhi", autoSelect: true } },
+  { id: "niuma", emoji: "🐂", name: "牛马", desc: "被压榨、疲于奔命（兼职/学术/学生干部等非正职事项）",
+    delta: { money: 10, mood: -10, sanity: -8 },
+    perk: "兼职/学术项目/学生干部收益+50%，但每日体力上限-1",
+    exclusiveGroup: "economy", category: "经济",
+    visibilityCond: (p) => p.identity !== "bianzhi" },  // 非在职编外才显示
+
+  // ── 第5排：特殊属性（无排他，可多选）──
+  // 注：原"发疯文学"已删除，融入特殊事件（心态<30时解锁"发疯模式"选项）
+  // 注：原"显眼包"已合并到"E人"
 ];
 
 
@@ -3181,6 +3222,9 @@ const ACHIEVEMENTS = {
   "最后一次": { desc: '"再考最后一次，就一次。"' },
   // v0.8 地区彩蛋成就
   "锤子精神": { desc: "陕西考公人专属——'锤子'是语气词，也是信念。" },
+  // v0.9 标签彩蛋成就
+  "臭外地的": { desc: "取消北京天之骄子标签触发——'呦，原来是臭外地的~'" },
+  "卷王": { desc: "宁可卷死自己，也要卷赢别人。" },
   "关中相声": { desc: "用关中话讲段子，自习室笑成一片。" },
   "怂了但记住了": { desc: '"额信。额信。"——你怂了，但记住了这份善意。' },
   "跨省靓仔": { desc: "陕西人说广东话——跨省考公人的勇气。" },

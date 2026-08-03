@@ -1,55 +1,68 @@
-/* ==========  基础重置 ========== */
+/* ==========  基础重置（v0.9 融合 Apple Design System）========== */
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 :root {
-  --bg: #f5f2eb;        /* 申论纸米色 */
-  --bg2: #ebe6d9;
-  --ink: #1a1a1a;       /* 宋体黑 */
-  --ink-soft: #4a4a4a;
-  --accent: #b91c1c;    /* 印章红 */
-  --accent-soft: #dc2626;
-  --gold: #b8860b;      /* 金榜色 */
-  --line: #d4cdb8;
-  --green: #166534;
-  --blue: #1e40af;
-  --mud: #8b6914;       /* 泥塘色 */
+  --bg: #f5f5f7;          /* Apple 浅灰背景（替换米色，更现代） */
+  --bg2: #e8e8ed;         /* Apple 二级背景 */
+  --bg-card: #ffffff;     /* Apple 卡片白 */
+  --ink: #1d1d1f;         /* Apple 文本黑（非纯黑） */
+  --ink-soft: #6e6e73;    /* Apple 次要文本灰 */
+  --accent: #0071e3;      /* Apple Blue 主色 */
+  --accent-soft: #2997ff; /* Apple Blue 浅色 */
+  --accent-red: #b91c1c;  /* 保留印章红（仅范进体系） */
+  --gold: #b8860b;        /* 金榜色（保留考公元素） */
+  --line: #d2d2d7;        /* Apple 分割线灰 */
+  --green: #34c759;       /* Apple Green */
+  --blue: #0071e3;        /* Apple Blue */
+  --mud: #8b6914;
+  /* Apple 间距系统：8px 基础单位 */
+  --space-1: 2px;  --space-2: 4px;  --space-3: 6px;  --space-4: 8px;
+  --space-5: 10px; --space-6: 12px; --space-7: 14px; --space-8: 16px;
+  --space-10: 20px; --space-12: 24px; --space-16: 32px; --space-20: 40px;
+  /* Apple 圆角：8px 标准 / 12px 大 / 980px 胶囊 */
+  --radius-sm: 5px; --radius-md: 8px; --radius-lg: 12px; --radius-xl: 18px; --radius-pill: 980px;
+  /* Apple 阴影：仅卡片使用 */
+  --shadow-card: 0 3px 5px 30px rgba(0,0,0,0.04);
+  --shadow-hover: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 html, body {
-  font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  font-family: -apple-system, "SF Pro Display", "SF Pro Text", "Noto Serif SC", "Songti SC", "SimSun", serif;
   background: var(--bg);
   color: var(--ink);
-  line-height: 1.7;
+  line-height: 1.47;        /* Apple 行高 */
+  letter-spacing: -0.374px; /* Apple 负字间距 */
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 body::before {
   content: "";
   position: fixed; inset: 0;
-  background-image: 
-    repeating-linear-gradient(0deg, transparent 0 28px, rgba(0,0,0,0.03) 28px 29px),
-    radial-gradient(circle at 20% 10%, rgba(184,134,11,0.08), transparent 60%),
-    radial-gradient(circle at 80% 90%, rgba(185,28,28,0.06), transparent 60%);
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(184,134,11,0.04), transparent 60%),
+    radial-gradient(circle at 80% 90%, rgba(0,113,227,0.03), transparent 60%);
   pointer-events: none;
   z-index: 1;
 }
 
 #app { position: relative; z-index: 2; min-height: 100vh; }
 
-/* ========== 屏幕切换 ========== */
-.screen { display: none; min-height: 100vh; padding: 20px 0; }
-.screen.active { display: block; animation: fadeIn 0.4s ease; }
+/* ========== 屏幕切换（Apple fadeIn + 物理滚动）========== */
+.screen { display: none; min-height: 100vh; padding: var(--space-12) 0; }
+.screen.active { display: block; animation: appleFadeIn 0.5s cubic-bezier(0.25, 0.1, 0.25, 1); }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+@keyframes appleFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Apple 单栏布局：最大宽度 520px，宏观留白 */
 .container {
   max-width: 520px;
   margin: 0 auto;
-  padding: 28px 24px;
+  padding: var(--space-16) var(--space-12);
 }
 
 /* ========== 开始界面 ========== */
@@ -161,35 +174,35 @@ body::before {
 .choice-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+  gap: var(--space-6);
 }
 .month-grid { grid-template-columns: repeat(2, 1fr); }
 @media (max-width: 480px) {
   .choice-grid, .month-grid { grid-template-columns: 1fr; }
 }
 
+/* v0.9: Apple 风格卡片——白底+8px圆角+微妙阴影+无左边框色块 */
 .choice-card {
-  background: white;
-  border: 2px solid var(--line);
-  padding: 18px 20px;
+  background: var(--bg-card);
+  border: none;
+  padding: var(--space-10) var(--space-10);
   cursor: pointer;
-  transition: all 0.25s ease;
-  border-left: 4px solid var(--gold);
-  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  border-radius: var(--radius-lg);
   position: relative;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.04);
 }
 .choice-card:hover, .choice-card:active {
-  background: var(--bg2);
-  border-left-color: var(--accent);
-  border-color: var(--accent);
-  transform: translateX(3px) translateY(-2px);
-  box-shadow: 3px 4px 0 var(--gold);
+  background: var(--bg-card);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover), 0 0 0 1px var(--accent);
 }
-/* 选中预览态 */
+/* 选中预览态——Apple Blue 边框 */
 .choice-card.selected {
-  background: linear-gradient(135deg, #fff7d6, #ffe9a8);
-  border: 3px solid var(--accent);
-  border-left: 6px solid var(--accent);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 2px var(--accent), 0 4px 12px rgba(0,113,227,0.15);
+  transform: scale(1.02) translateY(-2px);
+}
   transform: scale(1.03) translateY(-3px);
   box-shadow: 4px 5px 0 var(--accent), 0 0 0 3px rgba(185,28,28,.12);
   z-index: 2;
@@ -991,15 +1004,33 @@ body::before {
 /* ========== v0.4 票根/印章 风 UI 重做 ========== */
 /* ============================================ */
 
-/* 人设卡牌（票根/邮票风格） */
+/* 人设卡牌（票根/邮票风格 · v0.9 分类布局） */
 .lifetags-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+  display: block;
   margin-bottom: 20px;
 }
+.lifetag-category {
+  margin-bottom: 20px;
+}
+.lifetag-category-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+  border-left: 3px solid var(--gold);
+  padding-left: 8px;
+}
+.lifetag-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.lifetag-row .lifetag-card {
+  flex: 1 1 calc(50% - 5px);
+  min-width: 140px;
+}
 @media (min-width: 600px) {
-  .lifetags-grid { grid-template-columns: repeat(3, 1fr); }
+  .lifetag-row .lifetag-card { flex: 1 1 calc(33% - 7px); }
 }
 
 .lifetag-card {

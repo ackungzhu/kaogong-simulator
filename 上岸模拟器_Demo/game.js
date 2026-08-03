@@ -396,47 +396,111 @@ const Game = {
     showScreen("screen-lifetags");
   },
 
-  // ========== 人生标签多选 ==========
+  // ========== 人生标签多选（v0.9 重构：排他组+彩蛋+分类）==========
   renderLifeTags() {
     const grid = $("lifeTagsGrid");
     if (!grid) return;
-    grid.innerHTML = LIFE_TAGS.map(t => {
-      const fx = Object.entries(t.delta).map(([k, v]) => {
-        const icon = { study: "📚", mood: "❤️", money: "💰", relation: "🤝", sanity: "🧠" }[k];
-        return `${icon}${v > 0 ? "+" : ""}${v}`;
-      }).join(" ");
-      return `
-        <div class="lifetag-card" data-id="${t.id}" onclick="Game.toggleLifeTag('${t.id}')">
-          <div class="lifetag-stamp" style="display:none;">已选</div>
-          <div class="lifetag-top">
-            <span class="lifetag-emoji">${t.emoji}</span>
-            <span class="lifetag-name">${t.name}</span>
+    const ctx = this.makeContext();
+    // v0.9: 按分类分组渲染
+    const categories = {};
+    LIFE_TAGS.forEach(t => {
+      if (t.visibilityCond && !t.visibilityCond(ctx)) return;
+      const cat = t.category || "其他";
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(t);
+    });
+    let html = "";
+    Object.keys(categories).forEach(cat => {
+      html += `<div class="lifetag-category"><div class="lifetag-category-title">${cat}</div><div class="lifetag-row">`;
+      categories[cat].forEach(t => {
+        const fx = Object.entries(t.delta).map(([k, v]) => {
+          const icon = { study: "📚", mood: "❤️", money: "💰", relation: "🤝", sanity: "🧠" }[k];
+          return `${icon}${v > 0 ? "+" : ""}${v}`;
+        }).join(" ");
+        const autoSel = t.easterEgg && t.easterEgg.autoSelect && Player.province === "beijing";
+        if (autoSel && !Player.lifeTags.includes(t.id)) Player.lifeTags.push(t.id);
+        html += `
+          <div class="lifetag-card ${autoSel ? 'selected' : ''}" data-id="${t.id}" data-exclusive="${t.exclusiveGroup || ''}" onclick="Game.toggleLifeTag('${t.id}')">
+            <div class="lifetag-stamp" style="display:${autoSel ? 'block' : 'none'};">已选</div>
+            <div class="lifetag-top">
+              <span class="lifetag-emoji">${t.emoji}</span>
+              <span class="lifetag-name">${t.name}</span>
+            </div>
+            <div class="lifetag-desc">${t.desc}</div>
+            <div class="lifetag-fx">${fx}</div>
+            <div class="lifetag-perk">${t.perk}</div>
           </div>
-          <div class="lifetag-desc">${t.desc}</div>
-          <div class="lifetag-fx">${fx}</div>
-          <div class="lifetag-perk">${t.perk}</div>
-        </div>
-      `;
-    }).join("");
+        `;
+      });
+      html += `</div></div>`;
+    });
+    grid.innerHTML = html;
+    this.addConfirmBar("lifeTagsGrid", "确认标签 →", "Game.confirmLifeTags()");
+    $("lifeTagsCount").textContent = `已选 ${Player.lifeTags.length} / 4`;
   },
 
   toggleLifeTag(id) {
+    const tag = LIFE_TAGS.find(t => t.id === id);
+    if (!tag) return;
     const idx = Player.lifeTags.indexOf(id);
     if (idx >= 0) {
       Player.lifeTags.splice(idx, 1);
+      // v0.9: 天之骄子取消时触发"臭外地的"彩蛋
+      if (tag.easterEgg && tag.easterEgg.onDeselect && tag.easterEgg.onDeselect.type === "screen_glitch") {
+        this.triggerEasterEggGlitch(tag.easterEgg.onDeselect);
+        setTimeout(() => {
+          Player.lifeTags.push(id);
+          this._refreshLifeTagUI();
+        }, 3000);
+        return;
+      }
     } else {
+      // v0.9: 排他组检查
+      if (tag.exclusiveGroup) {
+        LIFE_TAGS.forEach(t => {
+          if (t.exclusiveGroup === tag.exclusiveGroup && Player.lifeTags.includes(t.id)) {
+            const i = Player.lifeTags.indexOf(t.id);
+            Player.lifeTags.splice(i, 1);
+          }
+        });
+      }
       if (Player.lifeTags.length >= 4) {
         toast("最多选 4 个标签", "normal", 1500);
         return;
       }
       Player.lifeTags.push(id);
     }
+    this._refreshLifeTagUI();
+  },
+
+  _refreshLifeTagUI() {
     document.querySelectorAll(".lifetag-card").forEach(card => {
       const cardId = card.getAttribute("data-id");
-      if (Player.lifeTags.includes(cardId)) card.classList.add("selected");
-      else card.classList.remove("selected");
+      if (Player.lifeTags.includes(cardId)) {
+        card.classList.add("selected");
+        const stamp = card.querySelector(".lifetag-stamp");
+        if (stamp) stamp.style.display = "block";
+      } else {
+        card.classList.remove("selected");
+        const stamp = card.querySelector(".lifetag-stamp");
+        if (stamp) stamp.style.display = "none";
+      }
     });
     $("lifeTagsCount").textContent = `已选 ${Player.lifeTags.length} / 4`;
+  },
+
+  // v0.9: 彩蛋——屏幕变红+ERROR404
+  triggerEasterEggGlitch(config) {
+    const overlay = document.createElement("div");
+    overlay.id = "glitch-overlay";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(185,28,28,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-family:monospace;";
+    overlay.innerHTML = '<div style="font-size:48px;font-weight:900;letter-spacing:4px;text-shadow:2px 2px 0 #000;">ERROR 404</div><div style="margin-top:20px;font-size:16px;max-width:300px;text-align:center;line-height:1.6;">' + config.message + '</div><div style="margin-top:30px;font-size:12px;opacity:0.7;">' + config.recovery + '</div>';
+    document.body.appendChild(overlay);
+    if (config.achievement) {
+      Player.achievements.add(config.achievement);
+      setTimeout(() => toast("🏅 " + config.achievement, "achievement", 2000), 1000);
+    }
+    setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 3000);
   },
 
   confirmLifeTags() {
@@ -452,18 +516,19 @@ const Game = {
 
   renderMonths() {
     const grid = $("monthGrid");
+    // v0.9: 仅显示月份，隐藏成就（选择后才弹出解锁）
     grid.innerHTML = START_MONTHS.map(m => {
       const fx = Object.entries(m.delta).map(([k, v]) => {
         const icon = { study: "📚", mood: "❤️", money: "💰", relation: "🤝", sanity: "🧠" }[k];
         return `${icon}${v > 0 ? "+" : ""}${v}`;
       }).join(" ");
       return `
-        <div class="choice-card" data-month="${m.month}" onclick="Game.selectMonth(${m.month})">
+        <div class="choice-card month-card-v9" data-month="${m.month}" onclick="Game.selectMonth(${m.month})">
           <div class="card-check">✓</div>
           <h3>${m.emoji} ${m.title}</h3>
-          <div class="card-desc">「${m.achievement}」</div>
           <div class="card-effects">${fx}</div>
           <div class="card-desc" style="margin-top:6px;">${m.desc}</div>
+          <div class="month-achievement-hidden" style="display:none;">🏆 ${m.achievement}</div>
         </div>
       `;
     }).join("");
@@ -474,8 +539,21 @@ const Game = {
   selectMonth(month) {
     this._selectedMonth = month;
     document.querySelectorAll("#monthGrid .choice-card").forEach(card => {
-      if (parseInt(card.getAttribute("data-month")) === month) card.classList.add("selected");
-      else card.classList.remove("selected");
+      if (parseInt(card.getAttribute("data-month")) === month) {
+        card.classList.add("selected");
+        // v0.9: 选择后弹出隐藏成就
+        const achDiv = card.querySelector(".month-achievement-hidden");
+        if (achDiv && achDiv.style.display === "none") {
+          achDiv.style.display = "block";
+          achDiv.style.animation = "fadeIn 0.5s";
+          const m = START_MONTHS.find(s => s.month === month);
+          if (m) {
+            toast("🏆 解锁隐藏成就：" + m.achievement, "achievement", 3000);
+          }
+        }
+      } else {
+        card.classList.remove("selected");
+      }
     });
   },
 
