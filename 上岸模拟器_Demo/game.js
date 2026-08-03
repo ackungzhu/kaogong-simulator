@@ -19,8 +19,8 @@ const Player = {
   daysPlayed: 0,
   totalDays: 12 * 30,
   // 体力 & 睡眠
-  ap: 4,
-  apMax: 4,
+  ap: 50,
+  apMax: 50,
   sleepStart: 23,           // 昨晚入睡时刻（小时）
   sleepHours: 8,            // 昨晚睡了多少小时
   consecutiveEarly: 0,      // 连续早起天数
@@ -1921,8 +1921,8 @@ const Game = {
     Player.day = 1;
     Player.hour = 8;
     Player.daysPlayed = 0;
-    Player.ap = 4;
-    Player.apMax = 4;
+  Player.ap = 50;
+  Player.apMax = 50;
     Player.sleepStart = 23;
     Player.sleepHours = 8;
     Player.consecutiveEarly = 0;
