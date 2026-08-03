@@ -10,23 +10,23 @@
 // 分类排列：按类别分组展示
 // 彩蛋：特殊条件触发隐藏效果（easterEgg 字段）
 const LIFE_TAGS = [
-  // ── 第1排：性格倾向（排他组A：I人 / E人 / 淡人 / 浓人）──
+  // ── 性格两组排他：I/E 同排；淡/浓 同排 ──
   { id: "iren", emoji: "🤐", name: "I人", desc: "MBTI内向型社交者",
     delta: { sanity: 5, relation: -8 },
     perk: "社交事件消耗精神+5，但独处事件加成+30%",
-    exclusiveGroup: "personality", category: "性格" },
+    exclusiveGroup: "socialStyle", category: "社交倾向" },
   { id: "eren", emoji: "🎤", name: "E人", desc: "MBTI外向型社交者（含原显眼包能力）",
     delta: { relation: 15, mood: 10, study: -3 },
     perk: "社交事件加成+30%+拍照分享类隐藏事件，但难抵御诱惑",
-    exclusiveGroup: "personality", category: "性格" },
+    exclusiveGroup: "socialStyle", category: "社交倾向" },
   { id: "danren", emoji: "💧", name: "淡人", desc: "情绪浓度低，波澜不惊",
     delta: { sanity: 12, mood: -3 },
     perk: "心态/精神波动幅度-30%（更稳）",
-    exclusiveGroup: "personality", category: "性格" },
+    exclusiveGroup: "emotionStyle", category: "情绪浓度" },
   { id: "nongren", emoji: "🔥", name: "浓人", desc: "情绪浓度高，爱恨分明",
     delta: { mood: 8, sanity: -8 },
     perk: "情绪事件波动+50%，触发范进体系概率+30%",
-    exclusiveGroup: "personality", category: "性格" },
+    exclusiveGroup: "emotionStyle", category: "情绪浓度" },
 
   // ── 第2排：奋斗姿态（排他组B：卷王 / 45度 / 佛系）──
   { id: "juanwang", emoji: "💪", name: "卷王", desc: "宁可卷死自己，也要卷赢别人",

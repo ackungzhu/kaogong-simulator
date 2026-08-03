@@ -435,8 +435,9 @@ const Game = {
       html += `</div></div>`;
     });
     grid.innerHTML = html;
-    this.addConfirmBar("lifeTagsGrid", "确认标签 →", "Game.confirmLifeTags()");
-    $("lifeTagsCount").textContent = `已选 ${Player.lifeTags.length} / 4`;
+    // index.html 已有固定底部确认栏，避免动态栏删除 lifeTagsCount
+    const countEl = $("lifeTagsCount");
+    if (countEl) countEl.textContent = `已选 ${Player.lifeTags.length} / 4`;
   },
 
   toggleLifeTag(id) {
@@ -486,7 +487,8 @@ const Game = {
         if (stamp) stamp.style.display = "none";
       }
     });
-    $("lifeTagsCount").textContent = `已选 ${Player.lifeTags.length} / 4`;
+    const countEl = $("lifeTagsCount");
+    if (countEl) countEl.textContent = `已选 ${Player.lifeTags.length} / 4`;
   },
 
   // v0.9: 彩蛋——屏幕变红+ERROR404

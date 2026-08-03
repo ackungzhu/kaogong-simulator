@@ -27,14 +27,18 @@
 }
 
 html, body {
-  font-family: -apple-system, "SF Pro Display", "SF Pro Text", "Noto Serif SC", "Songti SC", "SimSun", serif;
+  font-family: -apple-system, "SF Pro Display", "SF Pro Text", "PingFang SC", "Noto Sans SC", sans-serif;
   background: var(--bg);
   color: var(--ink);
-  line-height: 1.47;        /* Apple 行高 */
-  letter-spacing: -0.374px; /* Apple 负字间距 */
+  line-height: 1.47;
+  letter-spacing: -0.374px;
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+  scroll-snap-type: y proximity;
+  -webkit-overflow-scrolling: touch;
 }
 
 body::before {
@@ -55,6 +59,10 @@ body::before {
 
 @keyframes appleFadeIn {
   from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -127,22 +135,29 @@ body::before {
 /* ========== 按钮 ========== */
 .btn-main, .btn-secondary {
   display: block; width: 100%;
-  padding: 16px;
-  font-size: 17px; font-family: inherit; font-weight: bold;
-  border: none; border-radius: 6px;
+  min-height: 50px;
+  padding: 14px 20px;
+  font-size: 16px; font-family: inherit; font-weight: 600;
+  border: 0; border-radius: 999px;
   cursor: pointer;
-  transition: all 0.2s;
-  letter-spacing: 3px;
+  transition: transform .28s cubic-bezier(.22,1,.36,1), box-shadow .28s ease, background .28s ease;
+  letter-spacing: -.18px;
 }
 .btn-main {
-  background: var(--ink); color: white;
-  box-shadow: 3px 3px 0 var(--accent);
+  background: linear-gradient(180deg, #1683ee, #0071e3);
+  color: white;
+  box-shadow: 0 10px 24px rgba(0,113,227,.24), inset 0 1px 0 rgba(255,255,255,.28);
   margin-top: 16px;
 }
-.btn-main:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--accent); }
+.btn-main:hover { transform: translateY(-2px); box-shadow: 0 15px 32px rgba(0,113,227,.28); }
+.btn-main:active { transform: scale(.98); box-shadow: 0 5px 14px rgba(0,113,227,.2); }
 .btn-secondary {
-  background: white; color: var(--ink);
-  border: 1px solid var(--ink);
+  background: rgba(255,255,255,.56);
+  color: var(--ink);
+  border: 1px solid rgba(255,255,255,.72);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   margin-top: 10px;
 }
 
@@ -156,20 +171,23 @@ body::before {
 
 /* ========== 身份/月份选择 ========== */
 .screen-title {
-  text-align: center;
-  font-size: 28px;
-  letter-spacing: 4px;
-  margin-bottom: 8px;
-  border-bottom: 2px solid var(--ink);
-  padding-bottom: 12px;
-  display: inline-block;
+  text-align: left;
+  font-size: clamp(30px, 7vw, 44px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -1.2px;
+  margin-bottom: 10px;
+  border: 0;
+  padding: 0;
+  display: block;
   width: 100%;
 }
 .screen-sub {
-  text-align: center;
+  text-align: left;
   color: var(--ink-soft);
-  font-size: 13px;
-  margin-bottom: 24px;
+  font-size: 15px;
+  line-height: 1.5;
+  margin-bottom: 28px;
 }
 .choice-grid {
   display: grid;
@@ -245,13 +263,16 @@ body::before {
 .game-container { padding: 16px 20px; }
 
 .status-bar {
-  background: white;
-  border: 1px solid var(--ink);
+  background: linear-gradient(145deg, rgba(255,255,255,.82), rgba(244,247,252,.64));
+  border: 1px solid rgba(255,255,255,.68);
   padding: 14px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   position: sticky; top: 10px;
   z-index: 10;
-  box-shadow: 2px 2px 0 var(--line);
+  border-radius: 24px;
+  box-shadow: 0 16px 42px rgba(40,52,73,.1), inset 0 1px 0 rgba(255,255,255,.9);
+  backdrop-filter: blur(26px) saturate(155%);
+  -webkit-backdrop-filter: blur(26px) saturate(155%);
 }
 .status-top {
   display: flex;
@@ -310,11 +331,14 @@ body::before {
 
 /* ========== 事件卡片 ========== */
 .event-box {
-  background: white;
-  border: 1px solid var(--ink);
-  padding: 22px 20px;
-  margin-bottom: 16px;
-  box-shadow: 3px 3px 0 var(--accent);
+  background: linear-gradient(145deg, rgba(255,255,255,.86), rgba(245,247,251,.68));
+  border: 1px solid rgba(255,255,255,.76);
+  padding: 28px 22px 22px;
+  margin-bottom: 18px;
+  border-radius: 26px;
+  box-shadow: 0 20px 52px rgba(36,47,68,.11), inset 0 1px 0 rgba(255,255,255,.92);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
   position: relative;
 }
 .event-box::before {
@@ -1001,110 +1025,114 @@ body::before {
 }
 
 /* ============================================ */
-/* ========== v0.4 票根/印章 风 UI 重做 ========== */
+/* ========== v1.0 Apple Liquid Glass UI ========== */
 /* ============================================ */
 
-/* 人设卡牌（票根/邮票风格 · v0.9 分类布局） */
 .lifetags-grid {
   display: block;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 .lifetag-category {
-  margin-bottom: 20px;
+  margin-bottom: 28px;
+  padding: 14px;
+  border-radius: 28px;
+  background: rgba(255,255,255,.32);
+  border: 1px solid rgba(255,255,255,.6);
+  backdrop-filter: blur(20px) saturate(145%);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.82), 0 12px 34px rgba(42,54,75,.06);
 }
 .lifetag-category-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink-soft);
-  margin-bottom: 8px;
-  border-left: 3px solid var(--gold);
-  padding-left: 8px;
+  font-size: 12px;
+  font-weight: 650;
+  color: #6e6e73;
+  margin: 2px 2px 12px;
+  border: 0;
+  padding: 0;
+  text-transform: uppercase;
+  letter-spacing: .08em;
 }
 .lifetag-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+  align-items: stretch;
 }
 .lifetag-row .lifetag-card {
-  flex: 1 1 calc(50% - 5px);
-  min-width: 140px;
+  min-width: 0;
 }
-@media (min-width: 600px) {
-  .lifetag-row .lifetag-card { flex: 1 1 calc(33% - 7px); }
+@media (min-width: 720px) {
+  .container { max-width: 760px; }
+}
+@media (max-width: 520px) {
+  .lifetag-category { padding: 10px; border-radius: 22px; }
+  .lifetag-row { grid-template-columns: 1fr; }
 }
 
 .lifetag-card {
   position: relative;
-  background: #fdf8ee;
-  border: 2px dashed #a89c80;
-  border-radius: 4px;
-  padding: 14px 12px 12px;
+  min-height: 164px;
+  background: linear-gradient(145deg, rgba(255,255,255,.84), rgba(247,247,250,.62));
+  border: 1px solid rgba(255,255,255,.78);
+  border-radius: 22px;
+  padding: 18px 16px 16px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
-  font-family: "ZCOOL KuaiLe", "Noto Serif SC", "STKaiti", "KaiTi", serif;
+  font-family: -apple-system, "SF Pro Text", "PingFang SC", sans-serif;
+  box-shadow: 0 1px 1px rgba(0,0,0,.03), 0 10px 32px rgba(39,51,73,.08), inset 0 1px 0 rgba(255,255,255,.9);
+  backdrop-filter: blur(24px) saturate(145%);
+  -webkit-backdrop-filter: blur(24px) saturate(145%);
+  transition: transform .42s cubic-bezier(.22,1,.36,1), box-shadow .42s cubic-bezier(.22,1,.36,1), background .3s ease;
+  scroll-snap-align: start;
 }
-.lifetag-card::before,
-.lifetag-card::after {
+.lifetag-card::before {
   content: "";
   position: absolute;
-  top: 50%;
-  width: 12px; height: 12px;
-  background: var(--bg);
-  border: 2px dashed #a89c80;
+  width: 110px; height: 110px;
+  top: -72px; right: -58px;
   border-radius: 50%;
-  transform: translateY(-50%);
+  background: radial-gradient(circle, rgba(0,113,227,.14), transparent 70%);
+  pointer-events: none;
 }
-.lifetag-card::before { left: -7px; }
-.lifetag-card::after { right: -7px; }
+.lifetag-card::after { display:none; }
 
 .lifetag-card:hover {
-  transform: translateY(-4px) rotate(-1deg);
-  border-color: var(--gold);
-  border-style: solid;
-  box-shadow: 4px 4px 0 var(--gold);
-  background: #fffaee;
+  transform: translateY(-4px) scale(1.01);
+  background: rgba(255,255,255,.92);
+  box-shadow: 0 18px 44px rgba(31,45,67,.13), inset 0 1px 0 rgba(255,255,255,.96);
 }
 
-/* 选中状态：三重强反馈 */
 .lifetag-card.selected {
-  background: linear-gradient(135deg, #fff7d6, #ffe9a8);
-  border-style: solid;
-  border-color: var(--accent);
-  border-width: 3px;
-  transform: scale(1.05) rotate(-2deg);
-  box-shadow: 5px 5px 0 var(--accent), 0 0 0 4px rgba(185, 28, 28, 0.15);
+  background: linear-gradient(145deg, rgba(235,246,255,.96), rgba(255,255,255,.82));
+  border-color: rgba(0,113,227,.46);
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 2px rgba(0,113,227,.2), 0 18px 45px rgba(0,113,227,.18), inset 0 1px 0 rgba(255,255,255,.96);
   z-index: 2;
 }
-.lifetag-card.selected::before,
-.lifetag-card.selected::after {
-  border-color: var(--accent);
-}
 
-/* 选中时的"印章"角标 */
 .lifetag-card.selected .lifetag-stamp {
   position: absolute;
-  top: 4px; right: 4px;
-  width: 40px; height: 40px;
-  background: var(--accent);
+  top: 12px; right: 12px;
+  width: auto; height: 25px;
+  padding: 0 10px;
+  background: rgba(0,113,227,.92);
   color: white;
-  border-radius: 50%;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 1px;
-  font-family: "STKaiti", "KaiTi", serif;
-  transform: rotate(15deg);
-  box-shadow: 2px 2px 0 #7a0000;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  font-family: inherit;
+  transform: none;
+  box-shadow: 0 5px 18px rgba(0,113,227,.24);
   z-index: 3;
-  animation: stampIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: glassTagIn .34s cubic-bezier(.22,1,.36,1);
 }
-@keyframes stampIn {
-  0%   { transform: rotate(15deg) scale(0); }
-  60%  { transform: rotate(15deg) scale(1.4); }
-  100% { transform: rotate(15deg) scale(1); }
+@keyframes glassTagIn {
+  from { transform: scale(.84); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 .lifetag-top {
@@ -1115,36 +1143,36 @@ body::before {
 }
 .lifetag-emoji { font-size: 24px; }
 .lifetag-name {
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: 2px;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -.28px;
   color: var(--ink);
 }
 .lifetag-desc {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--ink-soft);
-  margin-bottom: 8px;
-  line-height: 1.5;
-  min-height: 32px;
+  margin-bottom: 12px;
+  line-height: 1.45;
+  min-height: 38px;
 }
 .lifetag-fx {
-  font-family: "Courier New", monospace;
-  font-size: 11px;
+  font-family: -apple-system, "SF Pro Text", "PingFang SC", sans-serif;
+  font-size: 12px;
   color: var(--accent);
-  margin-bottom: 6px;
-  font-weight: bold;
+  margin-bottom: 10px;
+  font-weight: 600;
 }
 .lifetag-perk {
-  font-size: 10px;
-  color: var(--ink-soft);
-  font-style: italic;
-  border-top: 1px dashed #a89c80;
-  padding-top: 6px;
-  line-height: 1.5;
+  font-size: 11px;
+  color: #6e6e73;
+  font-style: normal;
+  border-top: 1px solid rgba(29,29,31,.08);
+  padding-top: 10px;
+  line-height: 1.45;
 }
 .lifetag-card.selected .lifetag-perk {
-  color: var(--accent);
-  font-weight: bold;
+  color: #245f99;
+  font-weight: 500;
 }
 
 .lifetag-footer {
