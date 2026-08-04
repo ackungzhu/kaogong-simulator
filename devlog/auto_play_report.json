@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-08-04T10:26:28.090Z",
+  "version": "v0.9.2",
+  "totalGames": 50,
+  "metrics": {
+    "avgStudyHours": "7.00",
+    "avgStudyPoints": "23.0"
+  },
+  "verdict": "✅ 体力系统设计合理"
+}

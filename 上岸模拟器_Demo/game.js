@@ -18,9 +18,9 @@ const Player = {
   hour: 8,                  // 当天当前时刻（小时，可为小数 0-24）
   daysPlayed: 0,
   totalDays: 12 * 30,
-  // 体力 & 睡眠
-  ap: 4,
-  apMax: 4,
+  // 体力 & 睡眠 (v0.9.2 移除AP体力点，改为时间制)
+  ap: 999,
+  apMax: 999,
   sleepStart: 23,           // 昨晚入睡时刻（小时）
   sleepHours: 8,            // 昨晚睡了多少小时
   consecutiveEarly: 0,      // 连续早起天数
@@ -457,7 +457,7 @@ const Game = {
     grid.innerHTML = html;
     // index.html 已有固定底部确认栏，避免动态栏删除 lifeTagsCount
     const countEl = $("lifeTagsCount");
-    if (countEl) countEl.textContent = `已选 ${Player.lifeTags.length} / 4`;
+    if (countEl) countEl.textContent = `已选 ${Player.lifeTags.length} / 12`;
   },
 
   toggleLifeTag(id) {
@@ -485,8 +485,8 @@ const Game = {
           }
         });
       }
-      if (Player.lifeTags.length >= 4) {
-        toast("最多选 4 个标签", "normal", 1500);
+      if (Player.lifeTags.length >= 12) {
+        toast("最多选 12 个标签", "normal", 1500);
         return;
       }
       Player.lifeTags.push(id);
@@ -508,7 +508,7 @@ const Game = {
       }
     });
     const countEl = $("lifeTagsCount");
-    if (countEl) countEl.textContent = `已选 ${Player.lifeTags.length} / 4`;
+    if (countEl) countEl.textContent = `已选 ${Player.lifeTags.length} / 12`;
   },
 
   // v0.9: 彩蛋——屏幕变红+ERROR404
@@ -986,6 +986,14 @@ const Game = {
     return `<span class="v2-badge">${this._statusName()}</span>`;
   },
 
+  // v0.9.2: 显示今日身份场景
+  _showDailyScene() {
+    const ident = IDENTITIES.find(i => i.id === Player.identity);
+    if (!ident || !ident.dailyScenes || ident.dailyScenes.length === 0) return;
+    const scene = randPick(ident.dailyScenes);
+    setTimeout(() => toast(`📅 今天：${ident.name} · ${scene}`, "normal", 3000), 800);
+  },
+
   addLog(msg) {
     const log = $("logBox");
     if (!log) return;
@@ -1106,34 +1114,48 @@ const Game = {
     const grid = $("actionsGrid");
     if (!grid) return;
 
-    grid.innerHTML = ACTIONS.map(a => {
-      const apOk = Player.ap >= a.cost;
+    grid.innerHTML = ACTIONS.filter(a => {
+      // 身份专属行动过滤
+      if (a.identity && !a.identity.includes(Player.identity)) return false;
+      return true;
+    }).map(a => {
+      const apOk = true;  // v0.9.2 移除AP限制
       const dur = Array.isArray(a.duration) ? `${a.duration[0]}-${a.duration[1]}h` : `${a.duration}h`;
       const endHour = Player.hour + (Array.isArray(a.duration) ? a.duration[1] : a.duration);
       const timeOk = endHour <= 23.5;
-      const disabled = !apOk || !timeOk;
-      const reason = !apOk ? "体力不足" : (!timeOk ? "时间不够" : "");
-      const costDots = "⚡".repeat(a.cost);
+      const energyOk = Player.energy > 0 || !a.tag || a.tag !== "学习";
+      const disabled = !timeOk || !energyOk;
+      const reason = !timeOk ? "时间不够" : (!energyOk ? "精力耗尽（休息一下）" : "");
       const fxParts = [];
+      const renderFx = (key, v, icon) => {
+        if (v === 0 || v == null) return;
+        const cls = v > 0 ? 'fx-pos' : 'fx-neg';
+        fxParts.push(`<span class="fx-tag ${cls}">${icon}${v > 0 ? "+" : ""}${v}</span>`);
+      };
       Object.entries(a.effects).forEach(([k, v]) => {
         if (k === "sanity") return; // 精神改由下方 sanityDelta 显示
-        const icon = { study: "📚", mood: "❤️", money: "💰", relation: "🤝", sanity: "🧠" }[k];
-        fxParts.push(`${icon}${v > 0 ? "+" : ""}${v}`);
+        const icon = { study: "📚", mood: "❤️", money: "💰", relation: "🤝" }[k];
+        renderFx(k, v, icon);
       });
-      if (a.energy) fxParts.push(`⚡${a.energy > 0 ? "+" : ""}${a.energy}`);
-      if (a.sanityDelta != null) fxParts.push(`🧠${a.sanityDelta > 0 ? "+" : ""}${a.sanityDelta}`);
-      const fx = fxParts.join(" ");
+      renderFx('energy', a.energy, "⚡");
+      renderFx('sanity', a.sanityDelta, "🧠");
+      // 行动类型徽章
+      const tagBadge = a.tag === "学习" ? '<span class="tag-badge study">学习</span>'
+        : a.tag === "休闲" ? '<span class="tag-badge rest">休闲</span>'
+        : a.tag === "社交" ? '<span class="tag-badge social">社交</span>'
+        : a.tag === "生计" ? '<span class="tag-badge work">生计</span>'
+        : '';
       return `
-        <div class="action-card ${disabled ? "disabled" : ""}" data-action="${a.id}"
+        <div class="action-card ${disabled ? "disabled" : ""} ${a.identity ? 'action-idol' : ''}" data-action="${a.id}"
              onclick="${disabled ? `Game.hintBlock('${reason}')` : `Game.doAction('${a.id}')`}">
           <div class="action-top">
             <span class="action-icon">${a.icon}</span>
-            <span class="action-cost">${costDots}</span>
+            <span class="action-duration">⏱ ${dur}</span>
           </div>
           <div class="action-name">${a.name}</div>
           <div class="action-desc">${a.desc}</div>
-          <div class="action-time">⏱ ${dur}</div>
-          <div class="action-fx">${fx}</div>
+          <div class="action-fx">${fxParts.join(" ")}</div>
+          ${tagBadge}
         </div>
       `;
     }).join("");
@@ -1143,8 +1165,6 @@ const Game = {
       endBtn.style.display = "block";
       if (Player.hour >= 22) {
         endBtn.textContent = "🌙 该睡了 · 设置闹钟";
-      } else if (Player.ap === 0) {
-        endBtn.textContent = "💤 体力耗尽 · 提前结束今日";
       } else {
         endBtn.textContent = `🌙 结束今日 · 当前 ${fmtHour(Player.hour)}`;
       }
@@ -1159,7 +1179,11 @@ const Game = {
   doAction(actionId) {
     const act = ACTIONS.find(a => a.id === actionId);
     if (!act) return;
-    if (Player.ap < act.cost) return;
+    // v0.9.2 移除AP检查，仅检查时间
+    if (Player.energy <= 0 && act.tag === "学习") {
+      toast("精力耗尽，休息一下再继续", "warning");
+      return;
+    }
 
     // P0: 执行脉冲视觉反馈
     UI.pulseCard(actionId);
@@ -1171,8 +1195,8 @@ const Game = {
       duration = Math.round(duration * 10) / 10;
     }
 
-    Player.ap -= act.cost;
     Player.hour += duration;
+    // v0.9.2: AP不再消耗，仅时间推进
 
     // v2 数值系统：精力/精神/疲劳/状态（精神由 sanityDelta 负责，故从 act.effects 剔除 sanity 防双重计算）
     const eff = { ...act.effects };
@@ -1325,10 +1349,12 @@ const Game = {
 
     Player.daysPlayed++;
     Player.day++;
-    Player.ap = Player.apMax;
+    Player.ap = 999;
     Player._eventTriggeredToday = false;  // P0 修复: 新一天重置事件触发标记
     Player.studyHoursToday = 0; Player.focusBlocks = 0; Player.restedSinceBlock = true;
     Player.napCount = 0; Player.todaySolo = 0; Player.todaySocial = 0;
+    // v0.9.2: 身份今日场景提示（每天首次进入游戏时显示）
+    this._showDailyScene();
 
     if (Player.day > 30) {
       Player.day = 1;
@@ -1911,7 +1937,61 @@ const Game = {
         `;
       }).join("");
     }
+    // v0.9.2: 生成可截图的精美分享卡
+    this._renderShareCard(ending, achs);
+    // 自动记录到排行榜
+    if (typeof Leaderboard !== "undefined") Leaderboard.recordMyRecord();
     showScreen("screen-ending");
+  },
+
+  // v0.9.2: 渲染分享卡（用于html2canvas截图）
+  _renderShareCard(ending, achs) {
+    let card = $("shareCard");
+    if (!card) {
+      card = document.createElement("div");
+      card.id = "shareCard";
+      card.className = "share-card";
+      document.body.appendChild(card);
+    }
+    const idName = (IDENTITIES.find(x => x.id === Player.identity) || {}).name || "玩家";
+    const idEmoji = (IDENTITIES.find(x => x.id === Player.identity) || {}).emoji || "🧑";
+    const totalScore = (typeof Leaderboard !== "undefined") ? Leaderboard._calcTotalScore() : 0;
+    const days = Player.daysPlayed || 0;
+    const months = Math.floor(days / 30);
+    const topAches = achs.slice(0, 5);
+    const rarity = achs.length >= 20 ? "传说级考公人" : achs.length >= 10 ? "史诗级考公人" : achs.length >= 5 ? "稀有级考公人" : "普通考公人";
+    card.innerHTML = `
+      <div class="share-card-inner">
+        <div class="share-header">
+          <div class="share-logo">🎯 上岸模拟器</div>
+          <div class="share-subtitle">我的 2026 考公人档案</div>
+        </div>
+        <div class="share-character">
+          <div class="share-emoji">${ending.emoji}</div>
+          <div class="share-info">
+            <div class="share-name">${idEmoji} ${idName}</div>
+            <div class="share-ending">${ending.title}</div>
+            <div class="share-meta">${days}天备考 · ${rarity} · ${totalScore}分</div>
+          </div>
+        </div>
+        <div class="share-stats">
+          <div class="share-stat"><div class="share-stat-icon">📚</div><div class="share-stat-val">${Player.stats.study}</div><div class="share-stat-label">复习</div></div>
+          <div class="share-stat"><div class="share-stat-icon">❤️</div><div class="share-stat-val">${Player.stats.mood}</div><div class="share-stat-label">心态</div></div>
+          <div class="share-stat"><div class="share-stat-icon">💰</div><div class="share-stat-val">${Player.stats.money}</div><div class="share-stat-label">钱包</div></div>
+          <div class="share-stat"><div class="share-stat-icon">🤝</div><div class="share-stat-val">${Player.stats.relation}</div><div class="share-stat-label">关系</div></div>
+          <div class="share-stat"><div class="share-stat-icon">🧠</div><div class="share-stat-val">${Player.stats.sanity}</div><div class="share-stat-label">精神</div></div>
+        </div>
+        ${topAches.length > 0 ? `
+        <div class="share-achs">
+          <div class="share-achs-title">🏅 重要成就</div>
+          <div class="share-ach-list">${topAches.map(a => `<span class="share-ach-chip">${a}</span>`).join("")}</div>
+        </div>` : ''}
+        <div class="share-footer">
+          <div class="share-narrative">${ending.sub}</div>
+          <div class="share-qr">#上岸模拟器 #考公 #上岸</div>
+        </div>
+      </div>
+    `;
   },
 
   reset() {
@@ -1921,8 +2001,8 @@ const Game = {
     Player.day = 1;
     Player.hour = 8;
     Player.daysPlayed = 0;
-    Player.ap = 4;
-    Player.apMax = 4;
+    Player.ap = 999;
+    Player.apMax = 999;
     Player.sleepStart = 23;
     Player.sleepHours = 8;
     Player.consecutiveEarly = 0;
@@ -1993,8 +2073,10 @@ const AI = {
 const Share = {
   // v0.5: 升级为支持图片分享（html2canvas + canvas API 双重降级）
   screenshot() {
-    // 优先尝试 html2canvas 图片模式
-    if (typeof html2canvas !== "undefined" && $("endingContainer")) {
+    // v0.9.2: 优先截取专门的shareCard（精美设计）
+    if (typeof html2canvas !== "undefined" && $("shareCard")) {
+      this._screenshotImage();
+    } else if (typeof html2canvas !== "undefined" && $("endingContainer")) {
       this._screenshotImage();
     } else {
       this._screenshotText();
@@ -2003,7 +2085,7 @@ const Share = {
 
   async _screenshotImage() {
     try {
-      const target = $("endingContainer") || $("screen-ending");
+      const target = $("shareCard") || $("endingContainer") || $("screen-ending");
       toast("🎨 正在生成分享图...", "achievement", 1500);
       const canvas = await html2canvas(target, {
         backgroundColor: "#fdf8ee",
@@ -2074,6 +2156,151 @@ ${achs ? "\n🏅 成就：\n" + achs + "\n" : ""}
 #上岸模拟器 #考公 #公考 #行测 #申论 #考公人`;
   }
 };
+
+// ========== 排行榜 v0.9.2 ==========
+const Leaderboard = {
+  KEY: "kaogong_leaderboard",
+  currentTab: "my",
+
+  // 假想好友（演示用本地排行榜）
+  DEMO_FRIENDS: [
+    { name: "老王", emoji: "👨", identity: "985", totalScore: 720, ending: "上岸", survivalDays: 365, isFriend: true },
+    { name: "表妹", emoji: "👧", identity: "sanben", totalScore: 680, ending: "二战", survivalDays: 240, isFriend: true },
+    { name: "室友小李", emoji: "🧑", identity: "985", totalScore: 650, ending: "上岸", survivalDays: 320, isFriend: true },
+    { name: "研友小张", emoji: "👨‍🎓", identity: "bianzhi", totalScore: 590, ending: "崩溃", survivalDays: 180, isFriend: true },
+    { name: "二狗", emoji: "🐶", identity: "haigui", totalScore: 540, ending: "上岸", survivalDays: 410, isFriend: true },
+    { name: "上岸第一神", emoji: "🧙", identity: "xuandiao", totalScore: 920, ending: "上岸", survivalDays: 365, isFriend: true },
+  ],
+
+  show() {
+    showScreen("screen-leaderboard");
+    this.recordMyRecord();
+    this.render(this.currentTab);
+    this._setupTabs();
+  },
+
+  close() {
+    showScreen("screen-ending");
+  },
+
+  _setupTabs() {
+    document.querySelectorAll(".lb-tab").forEach(t => {
+      t.onclick = () => {
+        document.querySelectorAll(".lb-tab").forEach(x => x.classList.remove("active"));
+        t.classList.add("active");
+        this.currentTab = t.dataset.tab;
+        this.render(this.currentTab);
+      };
+    });
+  },
+
+  // 记录我自己的成绩
+  recordMyRecord() {
+    const myData = {
+      name: Player._playerName || "我",
+      emoji: "🧑‍💻",
+      identity: Player.identity,
+      totalScore: this._calcTotalScore(),
+      ending: $("endingTitle")?.textContent || "结局",
+      survivalDays: Player.daysPlayed || 0,
+      isMe: true,
+      timestamp: Date.now(),
+    };
+    try {
+      const all = this._getAll();
+      const idx = all.findIndex(r => r.isMe);
+      if (idx >= 0) all[idx] = myData; else all.push(myData);
+      localStorage.setItem(this.KEY, JSON.stringify(all));
+    } catch(e) {}
+  },
+
+  // 综合分 = 复习*2 + 精神*1 + 心态*1 + 钱包*0.5 + 关系*0.5 + 成就*5
+  _calcTotalScore() {
+    const s = Player.stats || {};
+    const achs = (Player.achievements && Player.achievements.size) || 0;
+    return Math.round(s.study * 2 + s.sanity + s.mood + s.money * 0.5 + s.relation * 0.5 + achs * 5);
+  },
+
+  _getAll() {
+    try { return JSON.parse(localStorage.getItem(this.KEY) || "[]"); }
+    catch(e) { return []; }
+  },
+
+  addFriend() {
+    toast("👋 已添加 6 位考公研友", "achievement", 1500);
+  },
+
+  share() {
+    const score = this._calcTotalScore();
+    const text = `我在《上岸模拟器》里考了 ${score} 分！\n#上岸模拟器 #考公人`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => toast("✓ 成绩已复制，去挑战好友吧！"));
+    } else {
+      toast("浏览器不支持复制");
+    }
+  },
+
+  render(tab) {
+    const listEl = $("lbList");
+    const countEl = $("lbTotalCount");
+    if (!listEl) return;
+
+    // 合并自己 + 假想好友
+    const myRecords = this._getAll();
+    const mySelf = myRecords.find(r => r.isMe);
+    const all = mySelf ? [...this.DEMO_FRIENDS, mySelf] : this.DEMO_FRIENDS;
+
+    // 排序
+    let sorted = [...all];
+    if (tab === "total") {
+      sorted.sort((a,b) => b.totalScore - a.totalScore);
+    } else if (tab === "survival") {
+      sorted.sort((a,b) => b.survivalDays - a.survivalDays);
+    } else if (tab === "ending") {
+      sorted.sort((a,b) => (a.ending === "上岸" ? -1 : 1) - (b.ending === "上岸" ? -1 : 1));
+    } else {
+      // my - 显示我 + 3个最近好友
+      const me = mySelf || all[0];
+      const friends = this.DEMO_FRIENDS.slice(0, 3);
+      sorted = [me, ...friends];
+    }
+
+    if (countEl) countEl.textContent = all.length;
+
+    const medals = ["🥇", "🥈", "🥉"];
+    listEl.innerHTML = sorted.map((r, i) => {
+      const rank = i + 1;
+      const rankClass = rank === 1 ? "lb-top1" : rank === 2 ? "lb-top2" : rank === 3 ? "lb-top3" : "";
+      const selfClass = r.isMe ? "lb-self" : "";
+      const idName = (IDENTITIES.find(x => x.id === r.identity) || {}).name || r.identity;
+      return `
+        <div class="lb-item ${rankClass} ${selfClass}">
+          <div class="lb-rank">${rank <= 3 ? medals[rank-1] : rank}</div>
+          <div class="lb-avatar">${r.emoji}</div>
+          <div class="lb-info">
+            <div class="lb-name">
+              ${r.name}
+              <span class="lb-tag">${idName}</span>
+              ${r.isMe ? '<span class="lb-tag lb-self-tag">我</span>' : ''}
+            </div>
+            <div class="lb-meta">结局：${r.ending} · 存活 ${r.survivalDays} 天</div>
+          </div>
+          <div>
+            <div class="lb-score">${r.totalScore}</div>
+            <div class="lb-score-unit">分</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    if (sorted.length === 0) {
+      listEl.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:40px 0;">暂无数据</div>';
+    }
+  }
+};
+
+// 兼容：旧代码可能用 wx.x，这里给个简化封装
+// （无需，localStorage 原生可用）
 
 const Settings = {
   open() {
