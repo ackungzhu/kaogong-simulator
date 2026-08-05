@@ -37,9 +37,8 @@ function simulateDay(player) {
   let studyHours = 0;
   let studyPoints = 0;
 
-  // 模拟一天：早晨6点起床，22:30前任意点行动
-  // 早晨必吃早饭（精力+12），之后主要学习，每2-3h休息一次
-  while (player.hour < 22.5) {
+  // v0.9.3: 时间上限26（凌晨2点），22点后仅警告不强制
+  while (player.hour < 26) {
     const study = ACTIONS.find(a => a.id === 'shuati');
     const wangke = ACTIONS.find(a => a.id === 'wangke');
     const rest = ACTIONS.find(a => a.id === 'chifan_solo');
@@ -66,7 +65,7 @@ function simulateDay(player) {
     }
 
     if (!choice) break;
-    if (player.hour + choice.duration > 22.5) break;
+    if (player.hour + choice.duration > 26) break;
 
     player.hour += choice.duration;
     player.energy = Math.max(0, Math.min(100, player.energy + choice.energy));

@@ -173,7 +173,7 @@ const ACTIONS = [
     id: "yundong", icon: "🏃", name: "去跑步",
     desc: "绕操场跑3圈",
     cost: 2, duration: 1,
-    energy: 10, sanityDelta: 6, socialLoad: "solo",
+    energy: 10, sanityDelta: 6, socialLoad: "solo", studyBuff: 0.10,
     effects: { mood: 10, sanity: 5, study: -2 },
     flavor: [
       "第二圈你就想回家了。",
@@ -188,7 +188,7 @@ const ACTIONS = [
     id: "chifan_solo", icon: "🍱", name: "独自吃饭",
     desc: "外卖/食堂随便扒两口",
     cost: 1, duration: 0.5,
-    energy: 12, sanityDelta: 2, socialLoad: "solo",
+    energy: 12, sanityDelta: 2, socialLoad: "solo", studyBuff: 0.15,
     effects: { mood: 4, money: -2, sanity: 1 },
     flavor: [
       "外卖小哥说：'加油！' 你愣了一下，说：'谢谢。'",
@@ -202,7 +202,7 @@ const ACTIONS = [
     id: "chifan_friend", icon: "🍜", name: "和朋友吃饭",
     desc: "喊一个研友/同学",
     cost: 1, duration: 1,
-    energy: 10, sanityDelta: 4, socialLoad: "light",
+    energy: 10, sanityDelta: 4, socialLoad: "light", studyBuff: 0.15,
     effects: { mood: 8, money: -5, relation: 5, sanity: 2 },
     flavor: [
       "他/她也在抱怨备考。你们成了精神同盟。",
@@ -244,7 +244,7 @@ const ACTIONS = [
     id: "shuijiao", icon: "😴", name: "白天小憩",
     desc: "午睡30分钟",
     cost: 0, duration: 0.5,
-    energy: 30, sanityDelta: 5, socialLoad: "solo",
+    energy: 30, sanityDelta: 5, socialLoad: "solo", studyBuff: 0.20,
     effects: { sanity: 8, mood: 3 },
     flavor: [
       "你梦见自己上岸了。醒来时哭了 1 分钟。",
@@ -299,7 +299,7 @@ const ACTIONS = [
     id: "ziyou", icon: "🧘", name: "冥想",
     desc: "坐着发呆也行",
     cost: 1, duration: 0.5,
-    energy: 20, sanityDelta: 8, socialLoad: "solo",
+    energy: 20, sanityDelta: 8, socialLoad: "solo", studyBuff: 0.10,
     effects: { sanity: 8, mood: 3 },
     flavor: [
       "你坐了 20 分钟，想了 3 次自己考不上怎么办。",

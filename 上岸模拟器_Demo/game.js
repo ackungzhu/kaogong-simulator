@@ -888,6 +888,12 @@ const Game = {
     }
     // 聚餐 → 次日宿醉
     if (act.id === "juhui") Player._hangoverNextDay = true;
+    // v0.9.3: 休息类行动触发学习效率buff（午休/吃饭/小憩/冥想/跑步）
+    if (act.studyBuff && !isStudy) {
+      Player._studyBuff = (Player._studyBuff || 1.0) + act.studyBuff;
+      Player._studyBuffTurns = (Player._studyBuffTurns || 0) + 2;  // 接下来2个学习行动享受加成
+      this.addLog(`✨ <i>获得学习效率+${Math.round(act.studyBuff * 100)}%（剩余${Player._studyBuffTurns}次学习）</i>`);
+    }
     // 计算精力/精神增量（先过人格修正）
     const d = {
       energy: (act.energy != null) ? act.energy : 0,
@@ -972,7 +978,7 @@ const Game = {
           <div class="v2-tl-now" style="left:${pos}%"></div>
         </div>
         <div class="v2-tl-scale"><span>6:00</span><span>12:00</span><span>18:00</span><span>23:00</span></div>
-        <div class="v2-tl-info">今日已学 ${Player.studyHoursToday.toFixed(1)}h · ${this._statusName()}</div>
+        <div class="v2-tl-info">今日已学 ${Player.studyHoursToday.toFixed(1)}h · ${this._statusName()}${Player._studyBuffTurns > 0 ? ` · ✨学习加成+${Math.round((Player._studyBuff - 1) * 100)}%（剩${Player._studyBuffTurns}次）` : ''}</div>
       `;
     }
   },
@@ -984,6 +990,27 @@ const Game = {
   _statusBadge() {
     if (Player.status === "healthy") return "";
     return `<span class="v2-badge">${this._statusName()}</span>`;
+  },
+
+  // v0.9.3: 渲染目标卡（参考大厂模拟器规则）
+  renderGoalCard() {
+    let card = $("goalCard");
+    if (!card) return;
+    const goal = this.getGoalCard();
+    const failHtml = goal.fail.map(f => `
+      <div class="goal-fail ${f.danger ? 'danger' : ''}">
+        <span class="goal-fail-label">${f.danger ? '⚠️' : '💀'} ${f.label}</span>
+        <span class="goal-fail-desc">${f.desc}</span>
+      </div>
+    `).join("");
+    card.innerHTML = `
+      <div class="goal-victory">
+        <div class="goal-victory-label">🏆 ${goal.victory.label}</div>
+        <div class="goal-victory-desc">${goal.victory.desc}</div>
+        <div class="goal-victory-progress">${goal.victory.progress}</div>
+      </div>
+      <div class="goal-fails">${failHtml}</div>
+    `;
   },
 
   // v0.9.2: 显示今日身份场景
@@ -1031,6 +1058,8 @@ const Game = {
       `;
       this.renderV2Status();
     }
+    // v0.9.3: 渲染目标卡
+    this.renderGoalCard();
 
     const keys = [
       { k: "study", icon: "📚", label: "复习" },
@@ -1122,7 +1151,7 @@ const Game = {
       const apOk = true;  // v0.9.2 移除AP限制
       const dur = Array.isArray(a.duration) ? `${a.duration[0]}-${a.duration[1]}h` : `${a.duration}h`;
       const endHour = Player.hour + (Array.isArray(a.duration) ? a.duration[1] : a.duration);
-      const timeOk = endHour <= 23.5;
+      const timeOk = endHour <= 26;  // v0.9.3: 允许学到凌晨2点
       const energyOk = Player.energy > 0 || !a.tag || a.tag !== "学习";
       const disabled = !timeOk || !energyOk;
       const reason = !timeOk ? "时间不够" : (!energyOk ? "精力耗尽（休息一下）" : "");
@@ -1164,7 +1193,9 @@ const Game = {
     if (endBtn) {
       endBtn.style.display = "block";
       if (Player.hour >= 22) {
-        endBtn.textContent = "🌙 该睡了 · 设置闹钟";
+        endBtn.textContent = "🌙 该睡了 · 设置闹钟（熬夜伤身）";
+      } else if (Player.hour >= 26) {
+        endBtn.textContent = "🥵 凌晨2点 · 必须睡了";
       } else {
         endBtn.textContent = `🌙 结束今日 · 当前 ${fmtHour(Player.hour)}`;
       }
@@ -1208,7 +1239,14 @@ const Game = {
       const coef = this.fatigueCoef(Player.studyHoursToday, Player.status);
       const energyCoef = 0.5 + 0.5 * Player.energy / Player.energyMax;
       const focusCoef = Player.focusBlocks >= 4 ? Math.pow(0.9, Player.focusBlocks - 3) : 1;
-      eff.study = Math.round(eff.study * coef * energyCoef * focusCoef);
+      // v0.9.3: studyBuff 临时学习加成（午休/吃饭后获得）
+      let buffCoef = 1.0;
+      if (Player._studyBuffTurns > 0) {
+        buffCoef = Player._studyBuff;
+        Player._studyBuffTurns--;
+        if (Player._studyBuffTurns <= 0) Player._studyBuff = 1.0;
+      }
+      eff.study = Math.round(eff.study * coef * energyCoef * focusCoef * buffCoef);
     }
     const changes = this.applyEffects(eff);
 
@@ -1353,6 +1391,7 @@ const Game = {
     Player._eventTriggeredToday = false;  // P0 修复: 新一天重置事件触发标记
     Player.studyHoursToday = 0; Player.focusBlocks = 0; Player.restedSinceBlock = true;
     Player.napCount = 0; Player.todaySolo = 0; Player.todaySocial = 0;
+    Player._lateNightWarned = false;  // v0.9.3 重置熬夜警告
     // v0.9.2: 身份今日场景提示（每天首次进入游戏时显示）
     this._showDailyScene();
 
@@ -1881,10 +1920,31 @@ const Game = {
 
   pickEnding() {
     const s = Player.stats;
+    // v0.9.3: 清晰的目标/失败条件（参考大厂模拟器规则）
+    // 失败条件优先判定
+    if (s.sanity <= 0) return ENDINGS.find(e => e.id === "bengkui") || DEFAULT_ENDING;
+    if (s.mood <= 0) return ENDINGS.find(e => e.id === "fangi") || DEFAULT_ENDING;
+    // 胜利条件：复习≥75 + 精神≥30 即可触发上岸判定
     for (const ending of ENDINGS) {
       if (ending.cond && ending.cond(s)) return ending;
     }
     return DEFAULT_ENDING;
+  },
+
+  // v0.9.3: 目标卡（参考大厂模拟器的"晋升条件速查"）
+  getGoalCard() {
+    const s = Player.stats;
+    const studyPct = Math.min(100, s.study);
+    const sanityPct = s.sanity;
+    const daysLeft = Player.totalDays - Player.daysPlayed;
+    return {
+      victory: { label: "上岸条件", desc: "复习≥75 + 精神≥30 + 考试分≥60", progress: `${studyPct}/75 📚 · ${sanityPct}/30 🧠` },
+      fail: [
+        { label: "精神崩溃", desc: "精神≤0", danger: sanityPct <= 15 },
+        { label: "心态归零", desc: "心态≤0 → 放弃考公", danger: s.mood <= 15 },
+        { label: "时间耗尽", desc: `${daysLeft}天后未上岸`, danger: daysLeft <= 30 },
+      ],
+    };
   },
 
   playFanjinCutscene(cb) {
